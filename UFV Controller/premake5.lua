@@ -1,4 +1,4 @@
-project "WalnutApp"
+project "UFV Controller"
    kind "ConsoleApp"
    language "C++"
    cppdialect "C++17"
