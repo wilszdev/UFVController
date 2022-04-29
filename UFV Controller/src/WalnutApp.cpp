@@ -617,14 +617,14 @@ public:
 			if (m_newController->X.pressed && ufvState.pumpOn)
 				ufvState.pumpOn = false;
 
-			if (m_newController->rightTriggerDigital.pressed && !m_newController->leftTriggerDigital.isDown)
+			if (ufvState.drive == 0 && m_newController->rightTriggerDigital.pressed && !m_newController->leftTriggerDigital.pressed)
 				ufvState.drive = 1;
-			if (m_newController->rightTriggerDigital.released && !m_newController->leftTriggerDigital.isDown)
+			if (ufvState.drive == 1 && m_newController->rightTriggerDigital.released)
 				ufvState.drive = 0;
 
-			if (m_newController->leftTriggerDigital.pressed && !m_newController->rightTriggerDigital.isDown)
+			if (ufvState.drive == 0 && m_newController->leftTriggerDigital.pressed && !m_newController->rightTriggerDigital.pressed)
 				ufvState.drive = -1;
-			if (m_newController->leftTriggerDigital.released && !m_newController->rightTriggerDigital.isDown)
+			if (ufvState.drive == -1 && m_newController->leftTriggerDigital.released)
 				ufvState.drive = 0;
 
 			if (m_newController->leftStick.avgY != 0.0)
