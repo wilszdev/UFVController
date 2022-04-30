@@ -656,7 +656,7 @@ public:
 Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
 {
 	Walnut::ApplicationSpecification spec;
-	spec.Name = "My Test App";
+	spec.Name = "UFV Controller";
 
 	Walnut::Application* app = new Walnut::Application(spec);
 	app->PushLayer<InputLayer>();
