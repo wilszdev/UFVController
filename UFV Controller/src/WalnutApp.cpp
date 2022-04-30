@@ -543,6 +543,52 @@ public:
 		m_newController = tmp;
 	}
 
+	void ActOnInput()
+	{
+		if (m_newController->A.pressed && !ufvState.pumpOn)
+		{
+			ufvState.pumpOn = true;
+			if (ufvState.power == 0)
+				ufvState.power = 255;
+		}
+
+		if (m_newController->X.pressed && ufvState.pumpOn)
+			ufvState.pumpOn = false;
+
+		if (ufvState.drive == 0 && m_newController->rightTriggerDigital.pressed && !m_newController->leftTriggerDigital.pressed)
+			ufvState.drive = 1;
+		if (ufvState.drive == 1 && m_newController->rightTriggerDigital.released)
+			ufvState.drive = 0;
+
+		if (ufvState.drive == 0 && m_newController->leftTriggerDigital.pressed && !m_newController->rightTriggerDigital.pressed)
+			ufvState.drive = -1;
+		if (ufvState.drive == -1 && m_newController->leftTriggerDigital.released)
+			ufvState.drive = 0;
+
+		if (m_newController->leftStick.avgY != 0.0)
+		{
+			ufvState.power += (int)(m_newController->leftStick.avgY * m_powerSensitivity);
+			if (ufvState.power > 255) ufvState.power = 255;
+			else if (ufvState.power < 0) ufvState.power = 0;
+		}
+
+		if (m_newController->rightStick.avgX != 0.0)
+		{
+			ufvState.angle += (int)(m_newController->rightStick.avgX * m_angleSensitivity);
+			if (ufvState.angle > 80) ufvState.angle = 80;
+			else if (ufvState.angle < -80) ufvState.angle = -80;
+		}
+
+		if (m_newController->right.pressed)
+			m_presetIndex = (m_presetIndex + 1) % NUM_PRESETS;
+
+		if (m_newController->left.pressed)
+			m_presetIndex = (m_presetIndex + NUM_PRESETS - 1) % NUM_PRESETS;
+
+		if (m_newController->up.pressed)
+			ufvState.angle = PRESET_ANGLE_VALUES[m_presetIndex];
+	}
+
 	virtual void OnUIRender() override
 	{
 		// poll input
@@ -623,51 +669,7 @@ public:
 
 		ImGui::End();
 
-		// act on input
-		{
-			if (m_newController->A.pressed && !ufvState.pumpOn)
-			{
-				ufvState.pumpOn = true;
-				if (ufvState.power == 0)
-					ufvState.power = 255;
-			}
-
-			if (m_newController->X.pressed && ufvState.pumpOn)
-				ufvState.pumpOn = false;
-
-			if (ufvState.drive == 0 && m_newController->rightTriggerDigital.pressed && !m_newController->leftTriggerDigital.pressed)
-				ufvState.drive = 1;
-			if (ufvState.drive == 1 && m_newController->rightTriggerDigital.released)
-				ufvState.drive = 0;
-
-			if (ufvState.drive == 0 && m_newController->leftTriggerDigital.pressed && !m_newController->rightTriggerDigital.pressed)
-				ufvState.drive = -1;
-			if (ufvState.drive == -1 && m_newController->leftTriggerDigital.released)
-				ufvState.drive = 0;
-
-			if (m_newController->leftStick.avgY != 0.0)
-			{
-				ufvState.power += (int)(m_newController->leftStick.avgY * m_powerSensitivity);
-				if (ufvState.power > 255) ufvState.power = 255;
-				else if (ufvState.power < 0) ufvState.power = 0;
-			}
-
-			if (m_newController->rightStick.avgX != 0.0)
-			{
-				ufvState.angle += (int)(m_newController->rightStick.avgX * m_angleSensitivity);
-				if (ufvState.angle > 80) ufvState.angle = 80;
-				else if (ufvState.angle < -80) ufvState.angle = -80;
-			}
-
-			if (m_newController->right.pressed)
-				m_presetIndex = (m_presetIndex + 1) % NUM_PRESETS;
-
-			if (m_newController->left.pressed)
-				m_presetIndex = (m_presetIndex + NUM_PRESETS - 1) % NUM_PRESETS;
-
-			if (m_newController->up.pressed)
-				ufvState.angle = PRESET_ANGLE_VALUES[m_presetIndex];
-		}
+		ActOnInput();
 	}
 };
 
