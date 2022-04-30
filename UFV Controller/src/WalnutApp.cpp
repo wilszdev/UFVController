@@ -297,8 +297,19 @@ public:
 			}
 
 			// only set the new pump power if pump is on or new power is zero
-			if (ufvState.power != m_oldState.power && (ufvState.power == 0 || ufvState.pumpOn))
+			if (ufvState.pumpOn != m_oldState.pumpOn 
+				|| (ufvState.power != m_oldState.power 
+					&& (ufvState.power == 0 
+						|| ufvState.pumpOn
+						)
+					)
+				)
 			{
+				// set power to zero if pump is off
+				int power = ufvState.power;
+				if (!ufvState.pumpOn)
+					ufvState.power = 0;
+				// write to com port
 				DWORD byteCount = 0;
 				if (WriteFile(m_comPort, "P", 1, &byteCount, 0) && byteCount == 1)
 				{
@@ -309,6 +320,9 @@ public:
 						Win32Log("[Outgoing COM Layer (%s)] Wrote \"P %d\".", m_comPortBuffer, ufvState.power);
 					}
 				}
+				// restore actual power value
+				if (!ufvState.pumpOn)
+					ufvState.power = power;
 			}
 
 			if (ImGui::BeginTable("outgoing ringbuffer", 4))
