@@ -453,6 +453,89 @@ public:
 		Win32XInputLoad();
 	}
 
+	virtual void OnUIRender() override
+	{
+		// poll input
+		PollXInput();
+
+		// render imgui
+		ImGui::Begin("Input Layer");
+
+		ImGui::Text("Current Preset Selected: %d (DPAD UP to apply)", m_presetIndex + 1);
+		ImGui::Dummy({ 0, 5 });
+
+		ImGui::Text("Sensitivity Parameters");
+		ImGui::SliderFloat("angle",  & m_angleSensitivity, 0.1f, 5.0f);
+		ImGui::SliderFloat("power",  & m_powerSensitivity, 0.1f, 5.0f);
+		ImGui::Dummy({ 0, 5 });
+
+		ImGui::Text("Controller Input State");
+		{
+			ImGui::BeginTable("inputs", 3);
+
+			ImGui::TableNextRow();
+			ImGui::TableSetColumnIndex(0);
+		
+			ImGui::Text("lt: %.2f", m_newController->leftTrigger);
+			ImGui::Text("rt: %.2f", m_newController->rightTrigger);
+		
+			ImGui::Dummy({ 0,5 });
+			ImGui::TableNextColumn();
+
+			ImGui::Text("lt (digital): %d", m_newController->leftTriggerDigital.isDown);
+			ImGui::Text("rt (digital): %d", m_newController->rightTriggerDigital.isDown);
+
+			ImGui::Dummy({ 0,5 });
+			ImGui::TableNextRow();
+			ImGui::TableSetColumnIndex(0);
+
+			ImGui::Text("ls x: %.2f", m_newController->leftStick.avgX);
+			ImGui::Text("ls y: %.2f", m_newController->leftStick.avgY);
+
+			ImGui::Dummy({ 0,5 });
+			ImGui::TableNextColumn();
+
+			ImGui::Text("rs x: %.2f", m_newController->rightStick.avgX);
+			ImGui::Text("rs y: %.2f", m_newController->rightStick.avgY);
+
+			ImGui::Dummy({ 0,5 });
+			ImGui::TableNextRow();
+			ImGui::TableSetColumnIndex(0);
+
+			ImGui::Text("up: %d", m_newController->up.isDown);
+			ImGui::Text("down: %d", m_newController->down.isDown);
+			ImGui::Text("left: %d", m_newController->left.isDown);
+			ImGui::Text("right: %d", m_newController->right.isDown);
+		
+			ImGui::Dummy({ 0,5 });
+			ImGui::TableNextColumn();
+		
+			ImGui::Text("A: %d", m_newController->A.isDown);
+			ImGui::Text("B: %d", m_newController->B.isDown);
+			ImGui::Text("X: %d", m_newController->X.isDown);
+			ImGui::Text("Y: %d", m_newController->Y.isDown);
+
+			ImGui::Dummy({ 0,5 });
+			ImGui::TableNextRow();
+			ImGui::TableSetColumnIndex(0);
+
+			ImGui::Text("lb: %d", m_newController->lb.isDown);
+			ImGui::Text("rb: %d", m_newController->rb.isDown);
+
+			ImGui::Dummy({ 0,5 });
+			ImGui::TableNextColumn();
+
+			ImGui::Text("back: %d", m_newController->back.isDown);
+			ImGui::Text("start: %d", m_newController->start.isDown);
+
+			ImGui::EndTable();
+		}
+
+		ImGui::End();
+
+		ActOnInput();
+	}
+private:
 	void PollXInput()
 	{
 		memset(m_newController, 0, sizeof(controller_input));
@@ -587,89 +670,6 @@ public:
 
 		if (m_newController->up.pressed)
 			ufvState.angle = PRESET_ANGLE_VALUES[m_presetIndex];
-	}
-
-	virtual void OnUIRender() override
-	{
-		// poll input
-		PollXInput();
-
-		// render imgui
-		ImGui::Begin("Input Layer");
-
-		ImGui::Text("Current Preset Selected: %d (DPAD UP to apply)", m_presetIndex + 1);
-		ImGui::Dummy({ 0, 5 });
-
-		ImGui::Text("Sensitivity Parameters");
-		ImGui::SliderFloat("angle",  & m_angleSensitivity, 0.1f, 5.0f);
-		ImGui::SliderFloat("power",  & m_powerSensitivity, 0.1f, 5.0f);
-		ImGui::Dummy({ 0, 5 });
-
-		ImGui::Text("Controller Input State");
-		{
-			ImGui::BeginTable("inputs", 3);
-
-			ImGui::TableNextRow();
-			ImGui::TableSetColumnIndex(0);
-		
-			ImGui::Text("lt: %.2f", m_newController->leftTrigger);
-			ImGui::Text("rt: %.2f", m_newController->rightTrigger);
-		
-			ImGui::Dummy({ 0,5 });
-			ImGui::TableNextColumn();
-
-			ImGui::Text("lt (digital): %d", m_newController->leftTriggerDigital.isDown);
-			ImGui::Text("rt (digital): %d", m_newController->rightTriggerDigital.isDown);
-
-			ImGui::Dummy({ 0,5 });
-			ImGui::TableNextRow();
-			ImGui::TableSetColumnIndex(0);
-
-			ImGui::Text("ls x: %.2f", m_newController->leftStick.avgX);
-			ImGui::Text("ls y: %.2f", m_newController->leftStick.avgY);
-
-			ImGui::Dummy({ 0,5 });
-			ImGui::TableNextColumn();
-
-			ImGui::Text("rs x: %.2f", m_newController->rightStick.avgX);
-			ImGui::Text("rs y: %.2f", m_newController->rightStick.avgY);
-
-			ImGui::Dummy({ 0,5 });
-			ImGui::TableNextRow();
-			ImGui::TableSetColumnIndex(0);
-
-			ImGui::Text("up: %d", m_newController->up.isDown);
-			ImGui::Text("down: %d", m_newController->down.isDown);
-			ImGui::Text("left: %d", m_newController->left.isDown);
-			ImGui::Text("right: %d", m_newController->right.isDown);
-		
-			ImGui::Dummy({ 0,5 });
-			ImGui::TableNextColumn();
-		
-			ImGui::Text("A: %d", m_newController->A.isDown);
-			ImGui::Text("B: %d", m_newController->B.isDown);
-			ImGui::Text("X: %d", m_newController->X.isDown);
-			ImGui::Text("Y: %d", m_newController->Y.isDown);
-
-			ImGui::Dummy({ 0,5 });
-			ImGui::TableNextRow();
-			ImGui::TableSetColumnIndex(0);
-
-			ImGui::Text("lb: %d", m_newController->lb.isDown);
-			ImGui::Text("rb: %d", m_newController->rb.isDown);
-
-			ImGui::Dummy({ 0,5 });
-			ImGui::TableNextColumn();
-
-			ImGui::Text("back: %d", m_newController->back.isDown);
-			ImGui::Text("start: %d", m_newController->start.isDown);
-
-			ImGui::EndTable();
-		}
-
-		ImGui::End();
-
-		ActOnInput();
 	}
 };
 
