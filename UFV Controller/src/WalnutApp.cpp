@@ -311,7 +311,7 @@ public:
 				}
 			}
 
-			if (ImGui::BeginTable("outgoing ringbuffer", 3))
+			if (ImGui::BeginTable("outgoing ringbuffer", 4))
 			{
 				char buf[32] = {};
 				for (int i = m_tail; i < ((m_head + 1 == m_tail) ? m_tail + RINGBUF_SIZE - 1: m_tail + m_head); ++i)
@@ -326,7 +326,11 @@ public:
 					ImGui::Text(buf);
 					ImGui::TableNextColumn();
 
-					sprintf_s(buf, "%d", c & 0xff);
+					sprintf_s(buf, "%d", (unsigned int)(c & 0xff));
+					ImGui::Text(buf);
+					ImGui::TableNextColumn();
+
+					sprintf_s(buf, "%d", (int)(signed char)(c & 0xff));
 					ImGui::Text(buf);
 					ImGui::TableNextColumn();
 
