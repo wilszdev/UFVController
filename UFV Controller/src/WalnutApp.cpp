@@ -597,7 +597,7 @@ public:
 		// render imgui
 		ImGui::Begin("Input Layer");
 
-		ImGui::Text("Current Preset Selected: %d (DPAD UP to apply)", m_presetIndex);
+		ImGui::Text("Current Preset Selected: %d (DPAD UP to apply)", m_presetIndex + 1);
 		ImGui::Dummy({ 0, 5 });
 
 		ImGui::Text("Sensitivity Parameters");
