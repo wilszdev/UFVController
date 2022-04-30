@@ -25,12 +25,7 @@ public:
 	virtual void OnUIRender() override
 	{
 		ImGui::Begin("Drive");
-
-		if (ImGui::SliderInt("##", &ufvState.drive, -1, 1, ufvState.drive == 0 ? "Brake" : (ufvState.drive == 1 ? "Forward" : "Reverse")))
-		{
-			printf("[DRIVE] drive mode to %d\n", ufvState.drive);
-		}
-
+		ImGui::SliderInt("##it's about drive, it's about power", &ufvState.drive, -1, 1, ufvState.drive == 0 ? "Brake" : (ufvState.drive == 1 ? "Forward" : "Reverse"));
 		ImGui::End();
 	}
 };
