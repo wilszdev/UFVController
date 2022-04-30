@@ -7,13 +7,14 @@
 #include "XInputHelpers.h"
 
 #define NUM_PRESETS 6
-const int PRESET_ANGLE_VALUES[NUM_PRESETS] = { -45,45,-45,45,-45,45 };
+const int PRESET_TILT_ANGLE_VALUES[NUM_PRESETS] = { -45,45,-45,45,-45,45 };
 
 struct ufv_state
 {
 	int drive;
 	int power;
-	int angle;
+	int panAngle;
+	int tiltAngle;
 	bool pumpOn;
 };
 
@@ -66,30 +67,50 @@ public:
 
 		ImGui::EndChild();
 
-		ImGui::BeginChild("##Angle", { 0, 150 }, true);
+		ImGui::BeginChild("##TiltAngle", { 0, 225 }, true);
 
 		{
-			ImGui::Text("Angle"); ImGui::SameLine(100);
-			ImGui::SliderInt("##angle", &ufvState.angle, -80, 80);
+			ImGui::Text("Tilt Angle"); ImGui::SameLine(100);
+			ImGui::SliderInt("##TILT", &ufvState.tiltAngle, -80, 80);
 
 			ImGui::Dummy({ 0, 0 }); ImGui::SameLine(100);
 
-			if (ImGui::Button("Min", { 100, 0 }))
-				ufvState.angle = -80;
+			if (ImGui::Button("Min##TILT", { 100, 0 }))
+				ufvState.tiltAngle = -80;
 			ImGui::SameLine();
 
-			if (ImGui::Button("Zero", { 100, 0 }))
-				ufvState.angle = 0;
+			if (ImGui::Button("Zero##TILT", { 100, 0 }))
+				ufvState.tiltAngle = 0;
 			ImGui::SameLine();
 
-			if (ImGui::Button("Max", { 100, 0 }))
-				ufvState.angle = 80;
+			if (ImGui::Button("Max##TILT", { 100, 0 }))
+				ufvState.tiltAngle = 80;
 
 			ImGui::Spacing();
 			ImGui::Separator();
 			ImGui::Spacing();
 
-			ImGui::Text("Angle Presets (click to apply)");
+			ImGui::Text("Pan Angle"); ImGui::SameLine(100);
+			ImGui::SliderInt("##PAN", &ufvState.panAngle, -80, 80);
+
+			ImGui::Dummy({ 0, 0 }); ImGui::SameLine(100);
+
+			if (ImGui::Button("Min##PAN", { 100, 0 }))
+				ufvState.panAngle = -80;
+			ImGui::SameLine();
+
+			if (ImGui::Button("Zero##PAN", { 100, 0 }))
+				ufvState.panAngle = 0;
+			ImGui::SameLine();
+
+			if (ImGui::Button("Max##PAN", { 100, 0 }))
+				ufvState.panAngle = 80;
+
+			ImGui::Spacing();
+			ImGui::Separator();
+			ImGui::Spacing();
+
+			ImGui::Text("Tilt Angle Presets (click to apply)");
 			ImGui::Spacing();
 			char buf[32] = {};
 			for (int i = 0; i < NUM_PRESETS; ++i)
@@ -98,7 +119,7 @@ public:
 				sprintf_s(buf, 32, "Preset %d", i + 1);
 				if (ImGui::Button(buf))
 				{
-					ufvState.angle = PRESET_ANGLE_VALUES[i];
+					ufvState.tiltAngle = PRESET_TILT_ANGLE_VALUES[i];
 					// m_power = m_presetPowerValues[i];
 				}
 				if (i != NUM_PRESETS - 1)
@@ -174,6 +195,7 @@ public:
 				ImGui::TableSetColumnIndex(0);
 				ImGui::Text("LS (Y)");
 				ImGui::Text("RS (X)");
+				ImGui::Text("RS (Y)");
 				ImGui::Text("A");
 				ImGui::Text("X");
 				ImGui::Dummy({ 0,5 });
@@ -182,7 +204,8 @@ public:
 
 				ImGui::TableNextColumn();
 				ImGui::Text("adjust pump power");
-				ImGui::Text("adjust nozzle angle");
+				ImGui::Text("adjust nozzle pan");
+				ImGui::Text("adjust nozzle tilt");
 				ImGui::Text("pump on");
 				ImGui::Text("pump off");
 				ImGui::Dummy({ 0,5 });
@@ -277,17 +300,27 @@ public:
 				}
 			}
 
-			if (ufvState.angle != m_oldState.angle)
+			if (ufvState.tiltAngle != m_oldState.tiltAngle)
 			{
-				DWORD byteCount = 0;
-				if (WriteFile(m_comPort, "A", 1, &byteCount, 0) && byteCount == 1)
+				char data[2] = { 'T', (char)ufvState.tiltAngle };
+				DWORD writeCount = 0;
+				if (WriteFile(m_comPort, data, 2, &writeCount, 0) && writeCount == 2)
+				{
+					WriteToRingBuf('T');
+					WriteToRingBuf((char)ufvState.tiltAngle);
+					Win32Log("[Outgoing COM Layer (%s)] Wrote \"A %d\".", m_comPortBuffer, ufvState.tiltAngle);
+				}
+			}
+
+			if (ufvState.panAngle != m_oldState.panAngle)
+			{
+				char data[2] = { 'A', (char)ufvState.panAngle };
+				DWORD writeCount = 0;
+				if (WriteFile(m_comPort, data, 2, &writeCount, 0) && writeCount == 2)
 				{
 					WriteToRingBuf('A');
-					if (WriteFile(m_comPort, (char*)&ufvState.angle, 1, &byteCount, 0) && byteCount == 1)
-					{
-						WriteToRingBuf((char)ufvState.angle);
-						Win32Log("[Outgoing COM Layer (%s)] Wrote \"A %d\".", m_comPortBuffer, ufvState.angle);
-					}
+					WriteToRingBuf((char)ufvState.panAngle);
+					Win32Log("[Outgoing COM Layer (%s)] Wrote \"A %d\".", m_comPortBuffer, ufvState.panAngle);
 				}
 			}
 
@@ -652,9 +685,30 @@ private:
 
 		if (m_newController->rightStick.avgX != 0.0)
 		{
-			ufvState.angle += (int)(m_newController->rightStick.avgX * m_angleSensitivity);
-			if (ufvState.angle > 80) ufvState.angle = 80;
-			else if (ufvState.angle < -80) ufvState.angle = -80;
+			float diff = m_newController->rightStick.avgX * m_angleSensitivity;
+			int truncDiff = (int)diff;
+
+			if ((float)truncDiff != diff)
+				if (diff > 0.0) truncDiff += 1;
+				else truncDiff -= 1;
+			
+			ufvState.panAngle += truncDiff;
+			if (ufvState.panAngle > 80) ufvState.panAngle = 80;
+			else if (ufvState.panAngle < -80) ufvState.panAngle = -80;
+		}
+
+		if (m_newController->rightStick.avgY != 0.0)
+		{
+			float diff = m_newController->rightStick.avgY * m_angleSensitivity;
+			int truncDiff = (int)diff;
+
+			if ((float)truncDiff != diff)
+				if (diff > 0.0) truncDiff += 1;
+				else truncDiff -= 1;
+
+			ufvState.tiltAngle += truncDiff;
+			if (ufvState.tiltAngle > 80) ufvState.tiltAngle = 80;
+			else if (ufvState.tiltAngle < -80) ufvState.tiltAngle = -80;
 		}
 
 		if (m_newController->right.pressed)
@@ -664,7 +718,7 @@ private:
 			m_presetIndex = (m_presetIndex + NUM_PRESETS - 1) % NUM_PRESETS;
 
 		if (m_newController->up.pressed)
-			ufvState.angle = PRESET_ANGLE_VALUES[m_presetIndex];
+			ufvState.tiltAngle = PRESET_TILT_ANGLE_VALUES[m_presetIndex];
 	}
 };
 
