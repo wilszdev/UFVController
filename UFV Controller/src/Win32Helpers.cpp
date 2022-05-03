@@ -97,6 +97,32 @@ HANDLE Win32OpenAndConfigureComPort(const char* name)
 		return 0;
 	}
 
+	if (!SetupComm(serial, 0x1000, 0x1000))
+	{
+		Win32Log("[Win32OpenAndConfigureComPort] SetupComm() failed with error %d: %s\n", GetLastError(), Win32GetErrorCodeDescription(GetLastError()).c_str());
+		return 0;
+	}
+
+	if (!PurgeComm(serial, PURGE_RXABORT | PURGE_TXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR))
+	{
+		Win32Log("[Win32OpenAndConfigureComPort] PurgeComm() failed with error %d: %s\n", GetLastError(), Win32GetErrorCodeDescription(GetLastError()).c_str());
+		return 0;
+	}
+
+	COMMTIMEOUTS ct = {};
+	ct.ReadIntervalTimeout = 1;
+	ct.ReadTotalTimeoutConstant = 0;
+	ct.ReadTotalTimeoutMultiplier = 0;
+	ct.WriteTotalTimeoutConstant = 1;
+	ct.WriteTotalTimeoutMultiplier = 0;
+
+	if (!SetCommTimeouts(serial, &ct))
+	{
+		Win32Log("[Win32OpenAndConfigureComPort] SetCommTimeouts() failed with error %d: %s\n", GetLastError(), Win32GetErrorCodeDescription(GetLastError()).c_str());
+		return 0;
+	}
+
+	Win32Log("[Win32OpenAndConfigureComPort] Successfully opened %s", name);
 	return serial;
 }
 
