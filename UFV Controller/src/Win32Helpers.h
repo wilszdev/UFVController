@@ -10,3 +10,5 @@ void Win32Log(const char* format, ...);
 std::string Win32GetErrorCodeDescription(DWORD err);
 
 HANDLE Win32OpenAndConfigureComPort(const char* name);
+
+bool Win32WriteByteToComPort(HANDLE port, char byte);

@@ -99,3 +99,49 @@ HANDLE Win32OpenAndConfigureComPort(const char* name)
 
 	return serial;
 }
+
+// could consider using TransmitCommChar instead of WriteFile
+bool Win32WriteByteToComPort(HANDLE port, char byte)
+{
+
+	DWORD writeCount = 0;
+	bool success = WriteFile(port, &byte, 1, &writeCount, 0) & 1;
+
+	if (!success)
+		Win32Log("[Win32WriteByteToComPort] WriteFile() failed with error %d: %s", GetLastError(), Win32GetErrorCodeDescription(GetLastError()).c_str());
+
+	// WriteFile will return true even if it times out.
+	// If it times out, then it will not have written
+	// the single byte, so writeCount will be zero
+	success = success && writeCount == 1;
+
+	DWORD errors = 0;
+	if (!ClearCommError(port, &errors, 0))
+		Win32Log("[Win32WriteByteToComPort] ClearCommError() failed with error %d: %s", GetLastError(), Win32GetErrorCodeDescription(GetLastError()).c_str());
+
+	if (errors)
+	{
+		if (errors & CE_BREAK)
+		{
+			Win32Log("[Win32WriteByteToComPort] Comm Error: CE_BREAK");
+		}
+		if (errors & CE_FRAME)
+		{
+			Win32Log("[Win32WriteByteToComPort] Comm Error: CE_FRAME");
+		}
+		if (errors & CE_OVERRUN)
+		{
+			Win32Log("[Win32WriteByteToComPort] Comm Error: CE_OVERRUN");
+		}
+		if (errors & CE_RXOVER)
+		{
+			Win32Log("[Win32WriteByteToComPort] Comm Error: CE_RXOVER");
+		}
+		if (errors & CE_RXPARITY)
+		{
+			Win32Log("[Win32WriteByteToComPort] Comm Error: CE_RXPARITY");
+		}
+	}
+
+	return success;
+}
