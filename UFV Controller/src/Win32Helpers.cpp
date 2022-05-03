@@ -70,11 +70,11 @@ std::string Win32GetErrorCodeDescription(DWORD err)
 
 HANDLE Win32OpenAndConfigureComPort(const char* name)
 {
-	printf("Win32OpenAndConfigureComPort() connecting to %s\n", name);
-	HANDLE serial = CreateFileA(name, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+	Win32Log("[Win32OpenAndConfigureComPort] Opening %s", name);
+	HANDLE serial = CreateFileA(name, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, 0, 0);
 	if (!serial || serial == INVALID_HANDLE_VALUE)
 	{
-		Win32Log("[Win32OpenAndConfigureComPort] CreateFile() failed with error %d: %s\n", GetLastError(), Win32GetErrorCodeDescription(GetLastError()).c_str());
+		Win32Log("[Win32OpenAndConfigureComPort] CreateFile() failed with error %d: %s", GetLastError(), Win32GetErrorCodeDescription(GetLastError()).c_str());
 		return 0;
 	}
 
@@ -82,7 +82,7 @@ HANDLE Win32OpenAndConfigureComPort(const char* name)
 
 	if (!GetCommState(serial, &dcb))
 	{
-		Win32Log("[Win32OpenAndConfigureComPort] GetCommState() failed with error %d: %s\n", GetLastError(), Win32GetErrorCodeDescription(GetLastError()).c_str());
+		Win32Log("[Win32OpenAndConfigureComPort] GetCommState() failed with error %d: %s", GetLastError(), Win32GetErrorCodeDescription(GetLastError()).c_str());
 		return 0;
 	}
 
