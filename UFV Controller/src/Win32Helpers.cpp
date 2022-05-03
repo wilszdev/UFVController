@@ -141,6 +141,9 @@ bool Win32WriteByteToComPort(HANDLE port, char byte)
 	// the single byte, so writeCount will be zero
 	success = success && writeCount == 1;
 
+	if (!success)
+		Win32Log("[Win32WriteByteToComPort] Failed to write byte 0x%x.", (int)byte);
+
 	DWORD errors = 0;
 	if (!ClearCommError(port, &errors, 0))
 		Win32Log("[Win32WriteByteToComPort] ClearCommError() failed with error %d: %s", GetLastError(), Win32GetErrorCodeDescription(GetLastError()).c_str());
