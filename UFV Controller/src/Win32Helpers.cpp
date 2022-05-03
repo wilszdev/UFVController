@@ -5,14 +5,34 @@ void Win32Log(const char* format, ...)
 	char buf[0x1000] = {};
 
 	char* argp = (char*)&format + sizeof(format);
-
 	vsprintf_s(buf, 0x1000, format, argp);
+	argp = nullptr;
 
 	strcat_s(buf, 0x1000, "\r\n");
 
-	argp = nullptr;
-
+	printf("%s", buf);
 	OutputDebugStringA(buf);
+
+	char path[MAX_PATH + 1] = {};
+	if (GetCurrentDirectoryA(MAX_PATH + 1, path))
+	{
+		if (!strcat_s(path, MAX_PATH + 1, "\\log.txt"))
+		{
+			HANDLE file = 0;
+
+			if (GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES)
+				file = CreateFileA(path, FILE_APPEND_DATA, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+			else if (GetLastError() == 2) // the system cannot find the file specified
+				file = CreateFileA(path, GENERIC_WRITE, 0, 0, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, 0);
+
+			if (file && file != INVALID_HANDLE_VALUE)
+			{
+				DWORD written = 0;
+				WriteFile(file, buf, strlen(buf), &written, 0);
+				CloseHandle(file);
+			}
+		}
+	}
 }
 
 std::string Win32GetErrorCodeDescription(DWORD err)
