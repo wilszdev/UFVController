@@ -308,7 +308,7 @@ public:
 				{
 					WriteToRingBuf('T');
 					WriteToRingBuf((char)ufvState.tiltAngle);
-					Win32Log("[Outgoing COM Layer (%s)] Wrote \"A %d\".", m_comPortBuffer, ufvState.tiltAngle);
+					Win32Log("[Outgoing COM Layer (%s)] Wrote \"T %d\".", m_comPortBuffer, ufvState.tiltAngle);
 				}
 			}
 
