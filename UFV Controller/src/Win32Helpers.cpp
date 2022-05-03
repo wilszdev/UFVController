@@ -2,13 +2,23 @@
 
 void Win32Log(const char* format, ...)
 {
-	char buf[0x1000] = {};
+	SYSTEMTIME time = {};
+	GetLocalTime(&time);
+
+	char timeBuf[0x100] = {};
+	sprintf_s(timeBuf, "[%04d-%02d-%02d %02d:%02d:%02d.%03d] ", time.wYear, time.wMonth, time.wDay, time.wHour, time.wMinute, time.wSecond, time.wMilliseconds);
+
+	char fmtBuf[0x1000] = {};
 
 	char* argp = (char*)&format + sizeof(format);
-	vsprintf_s(buf, 0x1000, format, argp);
+	vsprintf_s(fmtBuf, 0x1000, format, argp);
 	argp = nullptr;
 
-	strcat_s(buf, 0x1000, "\r\n");
+	strcat_s(fmtBuf, 0x1000, "\r\n");
+	
+	char buf[0x1000] = {};
+	strcat_s(buf, 0x1000, timeBuf);
+	strcat_s(buf, 0x1000, fmtBuf);
 
 	printf("%s", buf);
 	OutputDebugStringA(buf);
