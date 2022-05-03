@@ -251,8 +251,22 @@ public:
 			ImGui::InputText("##adsf", m_comPortBuffer, 8); ImGui::SameLine();
 
 			if (ImGui::Button("Attach") && *m_comPortBuffer)
+				m_comPort = Win32OpenAndConfigureComPort(m_comPortBuffer);
+		}
+		else
+		{
+			ImGui::Text("Attached to %s", m_comPortBuffer); ImGui::SameLine();
+			if (ImGui::Button("Detach"))
 			{
-				// attach to com port
+				CloseHandle(m_comPort);
+				m_comPort = 0;
+			}
+			ImGui::SameLine();
+
+			if (ImGui::Button("Reattach"))
+			{
+				CloseHandle(m_comPort);
+				m_comPort = 0;
 				m_comPort = Win32OpenAndConfigureComPort(m_comPortBuffer);
 			}
 		}
