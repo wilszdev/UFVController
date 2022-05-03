@@ -230,6 +230,7 @@ private:
 	char m_outBuffer[RINGBUF_SIZE] = {};
 	int m_head = 0;
 	int m_tail = 0;
+	int bufferedByte = -1;
 private:
 	void WriteToRingBuf(const char c)
 	{
@@ -258,99 +259,89 @@ public:
 
 		if (m_comPort)
 		{
-			if (ufvState.drive != m_oldState.drive)
+			if (bufferedByte != -1)
+				if (Win32WriteByteToComPort(m_comPort, bufferedByte & 0xFF))
+					bufferedByte = -1;
+
+			if (bufferedByte == -1)
 			{
-				switch (ufvState.drive)
+				if (ufvState.drive != m_oldState.drive)
 				{
-				case 0:
+					switch (ufvState.drive)
 					{
-						DWORD byteCount = 0;
-						if (WriteFile(m_comPort, "X", 1, &byteCount, 0) && byteCount == 1)
+					case 0:
 						{
-							WriteToRingBuf('X');
-							Win32Log("[Outgoing COM Layer (%s)] Wrote \"X\".", m_comPortBuffer);
+							if (Win32WriteByteToComPort(m_comPort, 'X'))
+								WriteToRingBuf('X');
+							break;
 						}
-						break;
-					}
-				case 1:
-					{
-						DWORD byteCount = 0;
-						if (WriteFile(m_comPort, "F", 1, &byteCount, 0) && byteCount == 1)
+					case 1:
 						{
-							WriteToRingBuf('F');
-							Win32Log("[Outgoing COM Layer (%s)] Wrote \"F\".", m_comPortBuffer);
+							if (Win32WriteByteToComPort(m_comPort, 'F'))
+								WriteToRingBuf('F');
+							break;
 						}
-						break;
-					}
-				case -1:
-					{
-						DWORD byteCount = 0;
-						if (WriteFile(m_comPort, "B", 1, &byteCount, 0) && byteCount == 1)
+					case -1:
 						{
-							WriteToRingBuf('B');
-							Win32Log("[Outgoing COM Layer (%s)] Wrote \"B\".", m_comPortBuffer);
+							if (Win32WriteByteToComPort(m_comPort, 'B'))
+								WriteToRingBuf('B');
+							break;
 						}
-						break;
-					}
-				default:
-					{
-						Win32Log("[Outgoing COM Layer %s] Invalid drive value %d", m_comPortBuffer, ufvState.drive);
+					default:
 						break;
 					}
 				}
-			}
 
-			if (ufvState.tiltAngle != m_oldState.tiltAngle)
-			{
-				char data[2] = { 'T', (char)ufvState.tiltAngle };
-				DWORD writeCount = 0;
-				if (WriteFile(m_comPort, data, 2, &writeCount, 0) && writeCount == 2)
+				if (ufvState.tiltAngle != m_oldState.tiltAngle)
 				{
-					WriteToRingBuf('T');
-					WriteToRingBuf((char)ufvState.tiltAngle);
-					Win32Log("[Outgoing COM Layer (%s)] Wrote \"T %d\".", m_comPortBuffer, ufvState.tiltAngle);
+					if (Win32WriteByteToComPort(m_comPort, 'T'))
+					{
+						WriteToRingBuf('T');
+						if (Win32WriteByteToComPort(m_comPort, (char)ufvState.tiltAngle))
+							WriteToRingBuf((char)ufvState.tiltAngle);
+						else
+							bufferedByte = (int)(ufvState.tiltAngle & 0xFF);
+					}
 				}
-			}
 
-			if (ufvState.panAngle != m_oldState.panAngle)
-			{
-				char data[2] = { 'A', (char)ufvState.panAngle };
-				DWORD writeCount = 0;
-				if (WriteFile(m_comPort, data, 2, &writeCount, 0) && writeCount == 2)
+				if (ufvState.panAngle != m_oldState.panAngle)
 				{
-					WriteToRingBuf('A');
-					WriteToRingBuf((char)ufvState.panAngle);
-					Win32Log("[Outgoing COM Layer (%s)] Wrote \"A %d\".", m_comPortBuffer, ufvState.panAngle);
+					if (Win32WriteByteToComPort(m_comPort, 'A'))
+					{
+						WriteToRingBuf('A');
+						if (Win32WriteByteToComPort(m_comPort, (char)ufvState.panAngle))
+							WriteToRingBuf((char)ufvState.panAngle);
+						else
+							bufferedByte = (int)(ufvState.panAngle & 0xFF);
+					}
 				}
-			}
 
-			// only set the new pump power if pump is on or new power is zero
-			if (ufvState.pumpOn != m_oldState.pumpOn 
-				|| (ufvState.power != m_oldState.power 
-					&& (ufvState.power == 0 
-						|| ufvState.pumpOn
+				// only set the new pump power if pump is on or new power is zero
+				if (ufvState.pumpOn != m_oldState.pumpOn 
+					|| (ufvState.power != m_oldState.power 
+						&& (ufvState.power == 0 
+							|| ufvState.pumpOn
+							)
 						)
 					)
-				)
-			{
-				// set power to zero if pump is off
-				int power = ufvState.power;
-				if (!ufvState.pumpOn)
-					ufvState.power = 0;
-				// write to com port
-				DWORD byteCount = 0;
-				if (WriteFile(m_comPort, "P", 1, &byteCount, 0) && byteCount == 1)
 				{
-					WriteToRingBuf('P');
-					if (WriteFile(m_comPort, (char*)&ufvState.power, 1, &byteCount, 0) && byteCount == 1)
+					// set power to zero if pump is off
+					int power = ufvState.power;
+					if (!ufvState.pumpOn)
+						ufvState.power = 0;
+					// write to com port
+					if (Win32WriteByteToComPort(m_comPort, 'P'))
 					{
-						WriteToRingBuf((char)ufvState.power);
-						Win32Log("[Outgoing COM Layer (%s)] Wrote \"P %d\".", m_comPortBuffer, ufvState.power);
+						WriteToRingBuf('P');
+						if (Win32WriteByteToComPort(m_comPort, (char)ufvState.power))
+							WriteToRingBuf((char)ufvState.power);
+						else
+							bufferedByte = (int)(ufvState.power & 0xFF);
 					}
+					// restore actual power value
+					if (!ufvState.pumpOn)
+						ufvState.power = power;
 				}
-				// restore actual power value
-				if (!ufvState.pumpOn)
-					ufvState.power = power;
 			}
 
 			if (ImGui::BeginTable("outgoing ringbuffer", 4))
