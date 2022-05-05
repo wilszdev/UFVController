@@ -136,23 +136,36 @@ HANDLE Win32OpenAndConfigureComPort(const char* name)
 	return serial;
 }
 
-// could consider using TransmitCommChar instead of WriteFile
 bool Win32WriteByteToComPort(HANDLE port, char byte)
 {
-
 	DWORD writeCount = 0;
-	bool success = WriteFile(port, &byte, 1, &writeCount, 0) & 1;
+	bool writeFileSuccess = WriteFile(port, &byte, 1, &writeCount, 0) & 1;
 
-	if (!success)
+	if (!writeFileSuccess)
 		Win32Log("[Win32WriteByteToComPort] WriteFile() failed with error %d: %s", GetLastError(), Win32GetErrorCodeDescription(GetLastError()).c_str());
 
 	// WriteFile will return true even if it times out.
 	// If it times out, then it will not have written
 	// the single byte, so writeCount will be zero
-	success = success && writeCount == 1;
+	bool success = writeFileSuccess && writeCount == 1;
+	
+	if (!success)
+	{
+		if (!PurgeComm(port, PURGE_RXABORT | PURGE_TXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR))
+			Win32Log("[Win32WriteByteToComPort] PurgeComm() failed with error %d: %s\n", GetLastError(), Win32GetErrorCodeDescription(GetLastError()).c_str());
+
+		writeFileSuccess = WriteFile(port, &byte, 1, &writeCount, 0) & 1;
+		if (!writeFileSuccess)
+			Win32Log("[Win32WriteByteToComPort] WriteFile() failed again with error %d: %s", GetLastError(), Win32GetErrorCodeDescription(GetLastError()).c_str());
+
+		success = writeFileSuccess && writeCount == 1;
+	}
 
 	if (!success)
 		Win32Log("[Win32WriteByteToComPort] Failed to write byte 0x%x.", (int)byte);
+
+	if (!ClearCommBreak(port))
+		Win32Log("[Win32WriteByteToComPort] ClearCommBreak() failed with error %d: %s", GetLastError(), Win32GetErrorCodeDescription(GetLastError()).c_str());
 
 	DWORD errors = 0;
 	if (!ClearCommError(port, &errors, 0))
