@@ -6,6 +6,8 @@
 #include "Win32Helpers.h"
 #include "XInputHelpers.h"
 
+#include <chrono>
+
 #define NUM_PRESETS 6
 const int PRESET_TILT_ANGLE_VALUES[NUM_PRESETS] = { -45,45,-45,45,-45,45 };
 
@@ -71,7 +73,7 @@ public:
 
 		{
 			ImGui::Text("Tilt Angle"); ImGui::SameLine(100);
-			ImGui::SliderInt("##TILT", &ufvState.tiltAngle, -80, 80);
+			ImGui::SliderInt("##TILT", &ufvState.tiltAngle, -5, 80);
 
 			ImGui::Dummy({ 0, 0 }); ImGui::SameLine(100);
 
@@ -219,174 +221,267 @@ public:
 	}
 };
 
-#define RINGBUF_SIZE 32
-
-class OutgoingComLayer : public Walnut::Layer
+template<typename T>
+class RingBuffer
 {
-private:
-	HANDLE m_comPort = 0;
-	char m_comPortBuffer[8] = {};
-	ufv_state m_oldState = {};
-	char m_outBuffer[RINGBUF_SIZE] = {};
+public:
 	int m_head = 0;
 	int m_tail = 0;
-	int bufferedByte = -1;
-private:
-	void WriteToRingBuf(const char c)
+	int m_size = 0;
+	T* m_data = nullptr;
+public:
+	RingBuffer() : RingBuffer(16)
 	{
-		m_outBuffer[m_head] = c;
-
+	}
+	RingBuffer(int size)
+	{
+		m_size = size;
+		m_data = new T[size];
+	}
+	~RingBuffer()
+	{
+		delete[] m_data;
+		m_data = nullptr;
+	}
+	void Write(const T& value)
+	{
+		m_data[head] = value;
 		m_head = (m_head + 1) % RINGBUF_SIZE;
 		if (m_tail == m_head) // full
 			m_tail = (m_tail + 1) % RINGBUF_SIZE;
 	}
+	void Write(const T&& value)
+	{
+		m_data[m_head] = value;
+		m_head = (m_head + 1) % m_size;
+		if (m_tail == m_head) // full
+			m_tail = (m_tail + 1) % m_size;
+	}
+};
+
+class CommsLayer : public Walnut::Layer
+{
+#define RECV_SIZE 0x4000
+private:
+	ufv_state m_oldState = {};
+	bool m_spamData = false;
+	int m_spamCount = 0;
+	int m_bufferedByte = -1;
+	RingBuffer<char> m_outgoingData{ 32 };
+	std::chrono::steady_clock::time_point m_lastTilt;
+	std::chrono::steady_clock::time_point m_lastPan;
+	char* m_recvBuffer = nullptr;
+	RingBuffer<std::string> m_incomingData{ 24 };
+	HANDLE m_comPort = 0;
+	char m_comPortBuffer[8] = {};
+private:
+	void DoOutgoingComms()
+	{
+		if (!m_comPort) return;
+
+		if (m_spamData)
+		{
+			if (Win32WriteByteToComPort(m_comPort, (char)0xAB))
+			{
+				m_outgoingData.Write((char)0xAB);
+				++m_spamCount;
+			}
+			else
+			{
+				Win32Log("[SPAM DATA] Spam failed after %d bytes were written.", m_spamCount);
+				m_spamData = false;
+			}
+		}
+
+		if (m_bufferedByte != -1)
+			if (Win32WriteByteToComPort(m_comPort, m_bufferedByte & 0xFF))
+				m_bufferedByte = -1;
+
+		if (m_bufferedByte == -1)
+		{
+			if (ufvState.drive != m_oldState.drive)
+			{
+				switch (ufvState.drive)
+				{
+				case 0:
+				{
+					if (Win32WriteByteToComPort(m_comPort, 'X'))
+						m_outgoingData.Write('X');
+					break;
+				}
+				case 1:
+				{
+					if (Win32WriteByteToComPort(m_comPort, 'F'))
+						m_outgoingData.Write('F');
+					break;
+				}
+				case -1:
+				{
+					if (Win32WriteByteToComPort(m_comPort, 'B'))
+						m_outgoingData.Write('B');
+					break;
+				}
+				default:
+					break;
+				}
+			}
+
+			if (ufvState.tiltAngle != m_oldState.tiltAngle)
+			{
+				std::chrono::nanoseconds diff = m_lastTilt - std::chrono::steady_clock::now();
+				size_t ms = diff.count() / 1000000;
+
+				if (ms > 100)
+				{
+					if (Win32WriteByteToComPort(m_comPort, 'T'))
+					{
+						m_outgoingData.Write('T');
+						if (Win32WriteByteToComPort(m_comPort, (char)ufvState.tiltAngle))
+							m_outgoingData.Write((char)ufvState.tiltAngle);
+						else
+							m_bufferedByte = (int)(ufvState.tiltAngle & 0xFF);
+				
+						m_lastTilt = std::chrono::steady_clock::now();
+					}
+				}
+			}
+
+			if (ufvState.panAngle != m_oldState.panAngle)
+			{
+				std::chrono::nanoseconds diff = m_lastPan - std::chrono::steady_clock::now();
+				size_t ms = diff.count() / 1000000;
+
+				if (ms > 100)
+				{
+					if (Win32WriteByteToComPort(m_comPort, 'A'))
+					{
+						m_outgoingData.Write('A');
+						if (Win32WriteByteToComPort(m_comPort, (char)ufvState.panAngle))
+							m_outgoingData.Write((char)ufvState.panAngle);
+						else
+							m_bufferedByte = (int)(ufvState.panAngle & 0xFF);
+
+						m_lastPan = std::chrono::steady_clock::now();
+					}
+				}
+			}
+
+			// only set the new pump power if pump is on or new power is zero
+			if (ufvState.pumpOn != m_oldState.pumpOn
+				|| (ufvState.power != m_oldState.power
+					&& (ufvState.power == 0
+						|| ufvState.pumpOn
+						)
+					)
+				)
+			{
+				// set power to zero if pump is off
+				int power = ufvState.power;
+				if (!ufvState.pumpOn)
+					ufvState.power = 0;
+				// write to com port
+				if (Win32WriteByteToComPort(m_comPort, 'P'))
+				{
+					m_outgoingData.Write('P');
+					if (Win32WriteByteToComPort(m_comPort, (char)ufvState.power))
+						m_outgoingData.Write((char)ufvState.power);
+					else
+						m_bufferedByte = (int)(ufvState.power & 0xFF);
+				}
+				// restore actual power value
+				if (!ufvState.pumpOn)
+					ufvState.power = power;
+			}
+		}
+	}
+
+	void DoIncomingComms()
+	{
+		if (!m_comPort) return;
+
+		memset(m_recvBuffer, 0, RECV_SIZE);
+
+		size_t totalRead = 0;
+
+		DWORD bytesRead = 0;
+		do
+		{
+			if (!ReadFile(m_comPort, m_recvBuffer + totalRead, RECV_SIZE - 1 - totalRead, &bytesRead, 0))
+				Win32Log("[DoIncomingComms] ReadFile() failed with error %d: %s", GetLastError(), Win32GetErrorCodeDescription(GetLastError()).c_str());
+			totalRead += bytesRead;
+		} while (bytesRead);
+		
+		if (totalRead && *m_recvBuffer)
+			m_incomingData.Write(std::string{ m_recvBuffer });
+	}
 public:
 	virtual void OnUIRender() override
 	{
-		ImGui::Begin("Outgoing COM");
-		static bool spamData = false;
-		static int spamCount = 0;
+		DoIncomingComms();
+		DoOutgoingComms();
 
+		ImGui::Begin("Comms Layer");
 
 		if (!m_comPort)
 		{
-			ImGui::Text("Outgoing COM Port");
+			ImGui::Text("COM Port");
 			ImGui::InputText("##adsf", m_comPortBuffer, 8); ImGui::SameLine();
 
-			if (ImGui::Button("Attach") && *m_comPortBuffer)
+			if (ImGui::Button("Open") && *m_comPortBuffer)
 				m_comPort = Win32OpenAndConfigureComPort(m_comPortBuffer);
 		}
 		else
 		{
-			ImGui::Text("Attached to %s", m_comPortBuffer); ImGui::SameLine();
-			if (ImGui::Button("Detach"))
+			ImGui::Text("Currently using %s", m_comPortBuffer); ImGui::SameLine();
+			if (ImGui::Button("Close"))
 			{
 				CloseHandle(m_comPort);
 				m_comPort = 0;
 			}
 			ImGui::SameLine();
 
-			if (ImGui::Button("Reattach"))
+			if (ImGui::Button("Reopen"))
 			{
 				CloseHandle(m_comPort);
 				m_comPort = 0;
 				m_comPort = Win32OpenAndConfigureComPort(m_comPortBuffer);
 			}
 
-			if (ImGui::Checkbox("spam", &spamData))
-				spamCount = 0;
+			if (ImGui::Checkbox("spam", &m_spamData))
+				m_spamCount = 0;
 			ImGui::SameLine();
-			ImGui::Text("SpamCount: %d", spamCount);
+			ImGui::Text("SpamCount: %d", m_spamCount);
 		}
 
-		if (m_comPort)
+		ImGui::BeginTabBar("asdfasdfasdf");
+		if (ImGui::BeginTabItem("Incoming Comms"))
 		{
-			if (spamData)
+			for (int i = m_incomingData.m_tail;
+				i < ((m_incomingData.m_head + 1 == m_incomingData.m_tail)
+					? m_incomingData.m_tail + m_incomingData.m_size - 1
+					: m_incomingData.m_tail + m_incomingData.m_head);
+				++i)
 			{
-				if (Win32WriteByteToComPort(m_comPort, 0xAB))
-				{
-					WriteToRingBuf(0xAB);
-					++spamCount;
-				}
-				else
-				{
-					Win32Log("[SPAMDATA] spam failed after %d bytes were written.", spamCount);
-					spamData = false;
-				}
+				const std::string& str = m_incomingData.m_data[i % m_incomingData.m_size];
+				ImGui::Text(str.c_str());
 			}
 
-			if (bufferedByte != -1)
-				if (Win32WriteByteToComPort(m_comPort, bufferedByte & 0xFF))
-					bufferedByte = -1;
+			ImGui::EndTabItem();
+		}
 
-			if (bufferedByte == -1)
-			{
-				if (ufvState.drive != m_oldState.drive)
-				{
-					switch (ufvState.drive)
-					{
-					case 0:
-						{
-							if (Win32WriteByteToComPort(m_comPort, 'X'))
-								WriteToRingBuf('X');
-							break;
-						}
-					case 1:
-						{
-							if (Win32WriteByteToComPort(m_comPort, 'F'))
-								WriteToRingBuf('F');
-							break;
-						}
-					case -1:
-						{
-							if (Win32WriteByteToComPort(m_comPort, 'B'))
-								WriteToRingBuf('B');
-							break;
-						}
-					default:
-						break;
-					}
-				}
-
-				if (ufvState.tiltAngle != m_oldState.tiltAngle)
-				{
-					if (Win32WriteByteToComPort(m_comPort, 'T'))
-					{
-						WriteToRingBuf('T');
-						if (Win32WriteByteToComPort(m_comPort, (char)ufvState.tiltAngle))
-							WriteToRingBuf((char)ufvState.tiltAngle);
-						else
-							bufferedByte = (int)(ufvState.tiltAngle & 0xFF);
-					}
-				}
-
-				if (ufvState.panAngle != m_oldState.panAngle)
-				{
-					if (Win32WriteByteToComPort(m_comPort, 'A'))
-					{
-						WriteToRingBuf('A');
-						if (Win32WriteByteToComPort(m_comPort, (char)ufvState.panAngle))
-							WriteToRingBuf((char)ufvState.panAngle);
-						else
-							bufferedByte = (int)(ufvState.panAngle & 0xFF);
-					}
-				}
-
-				// only set the new pump power if pump is on or new power is zero
-				if (ufvState.pumpOn != m_oldState.pumpOn 
-					|| (ufvState.power != m_oldState.power 
-						&& (ufvState.power == 0 
-							|| ufvState.pumpOn
-							)
-						)
-					)
-				{
-					// set power to zero if pump is off
-					int power = ufvState.power;
-					if (!ufvState.pumpOn)
-						ufvState.power = 0;
-					// write to com port
-					if (Win32WriteByteToComPort(m_comPort, 'P'))
-					{
-						WriteToRingBuf('P');
-						if (Win32WriteByteToComPort(m_comPort, (char)ufvState.power))
-							WriteToRingBuf((char)ufvState.power);
-						else
-							bufferedByte = (int)(ufvState.power & 0xFF);
-					}
-					// restore actual power value
-					if (!ufvState.pumpOn)
-						ufvState.power = power;
-				}
-			}
+		if (ImGui::BeginTabItem("Outgoing Comms"))
+		{
 
 			if (ImGui::BeginTable("outgoing ringbuffer", 4))
 			{
 				char buf[32] = {};
-				for (int i = m_tail; i < ((m_head + 1 == m_tail) ? m_tail + RINGBUF_SIZE - 1: m_tail + m_head); ++i)
+				for (int i = m_outgoingData.m_tail;
+					i < ((m_outgoingData.m_head + 1 == m_outgoingData.m_tail)
+						? m_outgoingData.m_tail + m_outgoingData.m_size - 1
+						: m_outgoingData.m_tail + m_outgoingData.m_head); ++i)
 				{
 					*buf = 0;
-					char c = m_outBuffer[i % RINGBUF_SIZE];
+					const char& c = m_outgoingData.m_data[i % m_outgoingData.m_size];
 					bool printable = (c > ' ' && c < '~');
 					ImGui::TableNextRow();
 					ImGui::TableSetColumnIndex(0);
@@ -409,94 +504,43 @@ public:
 
 				ImGui::EndTable();
 			}
+
+			ImGui::EndTabItem();
 		}
+
+		ImGui::EndTabBar();
 
 		ImGui::End();
 
 		memcpy(&m_oldState, &ufvState, sizeof(ufv_state));
 	}
-};
 
-class IncomingComLayer : public Walnut::Layer
-{
-private:
-	HANDLE m_comPort = 0;
-	char m_comPortBuffer[8] = {};
-private:
-	std::string m_outBuffer[RINGBUF_SIZE] = {};
-	int m_head = 0;
-	int m_tail = 0;
-private:
-	void WriteToRingBuf(const char* str)
+	virtual void OnAttach()
 	{
-		m_outBuffer[m_head] = std::string{ str };
-
-		m_head = (m_head + 1) % RINGBUF_SIZE;
-		if (m_tail == m_head) // full
-			m_tail = (m_tail + 1) % RINGBUF_SIZE;
+		m_recvBuffer = new char[RECV_SIZE];
 	}
-public:
-	virtual void OnUIRender() override
-	{
-		ImGui::Begin("Incoming COM");
 
-		if (!m_comPort)
-		{
-			ImGui::Text("Incoming COM Port");
-			ImGui::InputText("##jkl;", m_comPortBuffer, 8); ImGui::SameLine();
-
-			if (ImGui::Button("Attach") && *m_comPortBuffer)
-			{
-				// attach to com port
-				m_comPort = Win32OpenAndConfigureComPort(m_comPortBuffer);
-
-				// setup read timeouts, so we can synchronous reads don't block for long.
-				if (m_comPort)
-				{
-					COMMTIMEOUTS ct = {};
-
-					ct.ReadIntervalTimeout = 5;
-					ct.ReadTotalTimeoutMultiplier = 0;
-					ct.ReadTotalTimeoutConstant = 5;
-
-					SetCommTimeouts(m_comPort, &ct);
-				}
-			}
-		}
-
-		if (m_comPort)
-		{
-			char buffer[128] = {};
-			DWORD bytesRead = 0;
-			if (ReadFile(m_comPort, buffer, 128, &bytesRead, 0))
-			{
-				if (bytesRead && *buffer)
-					WriteToRingBuf(buffer);
-			}
-			else
-			{
-				Win32Log("[ReadFile] failed.");
-			}
-
-			// print everything
-			for (int i = m_tail; i < ((m_head + 1 == m_tail) ? m_tail + RINGBUF_SIZE - 1 : m_tail + m_head); ++i)
-				ImGui::Text(m_outBuffer[i % RINGBUF_SIZE].c_str());
-		}
-
-		ImGui::End();
-	}
 	virtual void OnDetach() override
 	{
-		CloseHandle(m_comPort);
-		m_comPort = 0;
+		if (m_recvBuffer)
+		{
+			delete[] m_recvBuffer;
+			m_recvBuffer = nullptr;
+		}
+		if (m_comPort)
+		{
+			CloseHandle(m_comPort);
+			m_comPort = 0;
+		}
 	}
 };
 
 class InputLayer : public Walnut::Layer
 {
 private:
-	float m_angleSensitivity = 1.0f;
-	float m_powerSensitivity = 1.0f;
+	float m_angleSensitivityX = -5.0f;
+	float m_angleSensitivityY = 5.0f;
+	float m_powerSensitivity = 5.0f;
 	int m_presetIndex = 0;
 
 	controller_input m_input[2] = { 0 };
@@ -520,8 +564,9 @@ public:
 		ImGui::Dummy({ 0, 5 });
 
 		ImGui::Text("Sensitivity Parameters");
-		ImGui::SliderFloat("angle",  & m_angleSensitivity, 0.1f, 5.0f);
-		ImGui::SliderFloat("power",  & m_powerSensitivity, 0.1f, 5.0f);
+		ImGui::SliderFloat("angleX",  & m_angleSensitivityX, -10.0f, 10.0f);
+		ImGui::SliderFloat("angleY",  & m_angleSensitivityY, -10.0f, 10.0f);
+		ImGui::SliderFloat("power",  & m_powerSensitivity, -10.0f, 10.0f);
 		ImGui::Dummy({ 0, 5 });
 
 		ImGui::Text("Controller Input State");
@@ -712,7 +757,7 @@ private:
 
 		if (m_newController->rightStick.avgX != 0.0)
 		{
-			float diff = m_newController->rightStick.avgX * m_angleSensitivity;
+			float diff = m_newController->rightStick.avgX * m_angleSensitivityX;
 			int truncDiff = (int)diff;
 
 			if ((float)truncDiff != diff)
@@ -726,7 +771,7 @@ private:
 
 		if (m_newController->rightStick.avgY != 0.0)
 		{
-			float diff = m_newController->rightStick.avgY * m_angleSensitivity;
+			float diff = m_newController->rightStick.avgY * m_angleSensitivityY;
 			int truncDiff = (int)diff;
 
 			if ((float)truncDiff != diff)
@@ -735,7 +780,7 @@ private:
 
 			ufvState.tiltAngle += truncDiff;
 			if (ufvState.tiltAngle > 80) ufvState.tiltAngle = 80;
-			else if (ufvState.tiltAngle < -80) ufvState.tiltAngle = -80;
+			else if (ufvState.tiltAngle < -5) ufvState.tiltAngle = -5;
 		}
 
 		if (m_newController->right.pressed)
@@ -759,8 +804,7 @@ Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
 	app->PushLayer<DriveLayer>();
 	app->PushLayer<FluidLayer>();
 	app->PushLayer<GamepadControlsLayer>();
-	app->PushLayer<IncomingComLayer>();
-	app->PushLayer<OutgoingComLayer>();
+	app->PushLayer<CommsLayer>();
 	app->SetMenubarCallback([app]()
 	{
 		if (ImGui::BeginMenu("File"))
