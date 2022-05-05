@@ -120,10 +120,10 @@ HANDLE Win32OpenAndConfigureComPort(const char* name)
 	}
 
 	COMMTIMEOUTS ct = {};
-	ct.ReadIntervalTimeout = 1;
-	ct.ReadTotalTimeoutConstant = 0;
+	ct.ReadIntervalTimeout = 5;
+	ct.ReadTotalTimeoutConstant = 5;
 	ct.ReadTotalTimeoutMultiplier = 0;
-	ct.WriteTotalTimeoutConstant = 1;
+	ct.WriteTotalTimeoutConstant = 5;
 	ct.WriteTotalTimeoutMultiplier = 0;
 
 	if (!SetCommTimeouts(serial, &ct))
