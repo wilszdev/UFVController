@@ -244,6 +244,9 @@ public:
 	virtual void OnUIRender() override
 	{
 		ImGui::Begin("Outgoing COM");
+		static bool spamData = false;
+		static int spamCount = 0;
+
 
 		if (!m_comPort)
 		{
@@ -269,10 +272,29 @@ public:
 				m_comPort = 0;
 				m_comPort = Win32OpenAndConfigureComPort(m_comPortBuffer);
 			}
+
+			if (ImGui::Checkbox("spam", &spamData))
+				spamCount = 0;
+			ImGui::SameLine();
+			ImGui::Text("SpamCount: %d", spamCount);
 		}
 
 		if (m_comPort)
 		{
+			if (spamData)
+			{
+				if (Win32WriteByteToComPort(m_comPort, 0xAB))
+				{
+					WriteToRingBuf(0xAB);
+					++spamCount;
+				}
+				else
+				{
+					Win32Log("[SPAMDATA] spam failed after %d bytes were written.", spamCount);
+					spamData = false;
+				}
+			}
+
 			if (bufferedByte != -1)
 				if (Win32WriteByteToComPort(m_comPort, bufferedByte & 0xFF))
 					bufferedByte = -1;
