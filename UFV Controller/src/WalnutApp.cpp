@@ -8,13 +8,14 @@
 
 #include <chrono>
 
+#define DELAY_MS 100
+
 #define NUM_PRESETS 6
 const int PRESET_TILT_ANGLE_VALUES[NUM_PRESETS] = { -45,45,-45,45,-45,45 };
 
 struct ufv_state
 {
 	int drive;
-	int power;
 	int panAngle;
 	int tiltAngle;
 	bool pumpOn;
@@ -41,35 +42,9 @@ public:
 		ImGui::Begin("Fluid Delivery");
 
 		if (ImGui::Button(ufvState.pumpOn ? "Turn pump off" : "Turn pump on"))
-		{
 			ufvState.pumpOn = !ufvState.pumpOn;
-			if (ufvState.pumpOn && ufvState.power == 0)
-				ufvState.power = 255;
-		}
 
-		ImGui::BeginChild("##Power", { 0, 75 }, true);
-
-		{
-			ImGui::Text("Power"); ImGui::SameLine(100);
-			if (ImGui::SliderInt("##power", &ufvState.power, 0, 255))
-			{
-				if (ufvState.power == 0)
-					ufvState.pumpOn = false;
-			}
-
-			ImGui::Dummy({ 0, 0 }); ImGui::SameLine(100);
-
-			if (ImGui::Button("Zero", { 100, 0 }))
-				ufvState.power = 0;
-			ImGui::SameLine();
-
-			if (ImGui::Button("Max", { 100, 0 }))
-				ufvState.power = 255;
-		}
-
-		ImGui::EndChild();
-
-		ImGui::BeginChild("##TiltAngle", { 0, 225 }, true);
+		ImGui::BeginChild("##AnglesAndPresets", { 0, 225 }, true);
 
 		{
 			ImGui::Text("Tilt Angle"); ImGui::SameLine(100);
@@ -78,7 +53,7 @@ public:
 			ImGui::Dummy({ 0, 0 }); ImGui::SameLine(100);
 
 			if (ImGui::Button("Min##TILT", { 100, 0 }))
-				ufvState.tiltAngle = -80;
+				ufvState.tiltAngle = -5;
 			ImGui::SameLine();
 
 			if (ImGui::Button("Zero##TILT", { 100, 0 }))
@@ -195,21 +170,17 @@ public:
 			{
 				ImGui::TableNextRow();
 				ImGui::TableSetColumnIndex(0);
-				ImGui::Text("LS (Y)");
 				ImGui::Text("RS (X)");
 				ImGui::Text("RS (Y)");
 				ImGui::Text("A");
-				ImGui::Text("X");
 				ImGui::Dummy({ 0,5 });
 				ImGui::Separator();
 				ImGui::Dummy({ 0,5 });
 
 				ImGui::TableNextColumn();
-				ImGui::Text("adjust pump power");
 				ImGui::Text("adjust nozzle pan");
 				ImGui::Text("adjust nozzle tilt");
-				ImGui::Text("pump on");
-				ImGui::Text("pump off");
+				ImGui::Text("pump on (hold)");
 				ImGui::Dummy({ 0,5 });
 				ImGui::Separator();
 			}
@@ -270,6 +241,8 @@ private:
 	RingBuffer<char> m_outgoingData{ 32 };
 	std::chrono::steady_clock::time_point m_lastTilt;
 	std::chrono::steady_clock::time_point m_lastPan;
+	bool m_skippedTiltAngleDueToDebounce = false;
+	bool m_skippedPanAngleDueToDebounce = false;
 	char* m_recvBuffer = nullptr;
 	RingBuffer<std::string> m_incomingData{ 24 };
 	HANDLE m_comPort = 0;
@@ -331,7 +304,7 @@ private:
 				std::chrono::nanoseconds diff = m_lastTilt - std::chrono::steady_clock::now();
 				size_t ms = diff.count() / 1000000;
 
-				if (ms > 100)
+				if (ms > DELAY_MS)
 				{
 					if (Win32WriteByteToComPort(m_comPort, 'T'))
 					{
@@ -340,10 +313,12 @@ private:
 							m_outgoingData.Write((char)ufvState.tiltAngle);
 						else
 							m_bufferedByte = (int)(ufvState.tiltAngle & 0xFF);
-				
+
 						m_lastTilt = std::chrono::steady_clock::now();
 					}
 				}
+				else
+					m_skippedTiltAngleDueToDebounce = true;
 			}
 
 			if (ufvState.panAngle != m_oldState.panAngle)
@@ -351,7 +326,7 @@ private:
 				std::chrono::nanoseconds diff = m_lastPan - std::chrono::steady_clock::now();
 				size_t ms = diff.count() / 1000000;
 
-				if (ms > 100)
+				if (ms > DELAY_MS)
 				{
 					if (Win32WriteByteToComPort(m_comPort, 'A'))
 					{
@@ -364,33 +339,22 @@ private:
 						m_lastPan = std::chrono::steady_clock::now();
 					}
 				}
+				else
+					m_skippedPanAngleDueToDebounce = true;
 			}
 
-			// only set the new pump power if pump is on or new power is zero
-			if (ufvState.pumpOn != m_oldState.pumpOn
-				|| (ufvState.power != m_oldState.power
-					&& (ufvState.power == 0
-						|| ufvState.pumpOn
-						)
-					)
-				)
+			if (ufvState.pumpOn != m_oldState.pumpOn)
 			{
-				// set power to zero if pump is off
-				int power = ufvState.power;
-				if (!ufvState.pumpOn)
-					ufvState.power = 0;
-				// write to com port
-				if (Win32WriteByteToComPort(m_comPort, 'P'))
+				if (ufvState.pumpOn)
 				{
-					m_outgoingData.Write('P');
-					if (Win32WriteByteToComPort(m_comPort, (char)ufvState.power))
-						m_outgoingData.Write((char)ufvState.power);
-					else
-						m_bufferedByte = (int)(ufvState.power & 0xFF);
+					if (Win32WriteByteToComPort(m_comPort, 'P'))
+						m_outgoingData.Write('P');
 				}
-				// restore actual power value
-				if (!ufvState.pumpOn)
-					ufvState.power = power;
+				else
+				{
+					if (Win32WriteByteToComPort(m_comPort, 'N'))
+						m_outgoingData.Write('N');
+				}
 			}
 		}
 	}
@@ -512,7 +476,15 @@ public:
 
 		ImGui::End();
 
+		int tmpP = m_oldState.panAngle;
+		int tmpT = m_oldState.tiltAngle;
+
 		memcpy(&m_oldState, &ufvState, sizeof(ufv_state));
+
+		if (m_skippedPanAngleDueToDebounce)
+			m_oldState.panAngle = tmpP;
+		if (m_skippedTiltAngleDueToDebounce)
+			m_oldState.tiltAngle = tmpT;
 	}
 
 	virtual void OnAttach()
@@ -538,8 +510,8 @@ public:
 class InputLayer : public Walnut::Layer
 {
 private:
-	float m_angleSensitivityX = -5.0f;
-	float m_angleSensitivityY = 5.0f;
+	float m_angleSensitivityX = -2.5f;
+	float m_angleSensitivityY = 2.5f;
 	float m_powerSensitivity = 5.0f;
 	int m_presetIndex = 0;
 
@@ -729,13 +701,9 @@ private:
 	void ActOnInput()
 	{
 		if (m_newController->A.pressed && !ufvState.pumpOn)
-		{
 			ufvState.pumpOn = true;
-			if (ufvState.power == 0)
-				ufvState.power = 255;
-		}
 
-		if (m_newController->X.pressed && ufvState.pumpOn)
+		if (m_newController->A.released && ufvState.pumpOn)
 			ufvState.pumpOn = false;
 
 		if (ufvState.drive == 0 && m_newController->rightTriggerDigital.pressed && !m_newController->leftTriggerDigital.pressed)
@@ -748,21 +716,10 @@ private:
 		if (ufvState.drive == -1 && m_newController->leftTriggerDigital.released)
 			ufvState.drive = 0;
 
-		if (m_newController->leftStick.avgY != 0.0)
-		{
-			ufvState.power += (int)(m_newController->leftStick.avgY * m_powerSensitivity);
-			if (ufvState.power > 255) ufvState.power = 255;
-			else if (ufvState.power < 0) ufvState.power = 0;
-		}
-
 		if (m_newController->rightStick.avgX != 0.0)
 		{
 			float diff = m_newController->rightStick.avgX * m_angleSensitivityX;
 			int truncDiff = (int)diff;
-
-			if ((float)truncDiff != diff)
-				if (diff > 0.0) truncDiff += 1;
-				else truncDiff -= 1;
 			
 			ufvState.panAngle += truncDiff;
 			if (ufvState.panAngle > 80) ufvState.panAngle = 80;
@@ -773,10 +730,6 @@ private:
 		{
 			float diff = m_newController->rightStick.avgY * m_angleSensitivityY;
 			int truncDiff = (int)diff;
-
-			if ((float)truncDiff != diff)
-				if (diff > 0.0) truncDiff += 1;
-				else truncDiff -= 1;
 
 			ufvState.tiltAngle += truncDiff;
 			if (ufvState.tiltAngle > 80) ufvState.tiltAngle = 80;
