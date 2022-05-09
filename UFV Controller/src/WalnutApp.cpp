@@ -41,8 +41,7 @@ public:
 	{
 		ImGui::Begin("Fluid Delivery");
 
-		if (ImGui::Button(ufvState.pumpOn ? "Turn pump off" : "Turn pump on"))
-			ufvState.pumpOn = !ufvState.pumpOn;
+		ImGui::Checkbox("Pump", &ufvState.pumpOn);
 
 		ImGui::BeginChild("##AnglesAndPresets", { 0, 225 }, true);
 
