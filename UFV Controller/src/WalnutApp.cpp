@@ -728,6 +728,48 @@ private:
 	}
 };
 
+class LoggingLayer : public Walnut::Layer
+{
+private:
+	std::vector<std::string> m_loggedStrings{};
+public:
+	virtual void OnAttach() override
+	{
+		if (LogCallback::callback == nullptr && LogCallback::callbackParameter == nullptr)
+		{
+			LogCallback::callback = Callback;
+			LogCallback::callbackParameter = this;
+		}
+	}
+
+	virtual void OnDetach() override
+	{
+		if (LogCallback::callbackParameter == this)
+		{
+			LogCallback::callback = nullptr;
+			LogCallback::callbackParameter = nullptr;
+		}
+	}
+
+	virtual void OnUIRender() override
+	{
+		ImGui::Begin("Log");
+
+		for (const auto& s : m_loggedStrings)
+			ImGui::Text(s.c_str());
+
+		ImGui::End();
+	}
+
+	static void Callback(const char* str, void* parameter)
+	{
+#define this _this
+		LoggingLayer* this = reinterpret_cast<LoggingLayer*>(parameter);
+		this->m_loggedStrings.emplace_back(str);
+#undef this
+	}
+};
+
 Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
 {
 	Walnut::ApplicationSpecification spec;
