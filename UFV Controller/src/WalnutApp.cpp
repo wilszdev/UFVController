@@ -10,8 +10,6 @@
 
 #define DELAY_MS 100
 
-#define NUM_PRESETS 6
-const int PRESET_TILT_ANGLE_VALUES[NUM_PRESETS] = { -45,45,-45,45,-45,45 };
 
 struct ufv_state
 {
@@ -22,6 +20,18 @@ struct ufv_state
 };
 
 static ufv_state ufvState = {};
+
+#define NUM_PRESETS 6
+const int PRESET_TILT_ANGLE_VALUES[NUM_PRESETS] = { -5,45,-5,45,-5,45 };
+const int PRESET_PAN_ANGLE_VALUES[NUM_PRESETS] = { -60,60,-60,60,-60,60 };
+
+void ApplyPreset(int index)
+{
+	if (index < 0 || index > NUM_PRESETS - 1) return;
+
+	ufvState.tiltAngle = PRESET_TILT_ANGLE_VALUES[index];
+	ufvState.panAngle = PRESET_PAN_ANGLE_VALUES[index];
+}
 
 class DriveLayer : public Walnut::Layer
 {
@@ -94,10 +104,8 @@ public:
 				*buf = 0;
 				sprintf_s(buf, 32, "Preset %d", i + 1);
 				if (ImGui::Button(buf))
-				{
-					ufvState.tiltAngle = PRESET_TILT_ANGLE_VALUES[i];
-					// m_power = m_presetPowerValues[i];
-				}
+					ApplyPreset(i);
+
 				if (i != NUM_PRESETS - 1)
 					ImGui::SameLine();
 			}
@@ -724,7 +732,7 @@ private:
 			m_presetIndex = (m_presetIndex + NUM_PRESETS - 1) % NUM_PRESETS;
 
 		if (m_newController->up.pressed)
-			ufvState.tiltAngle = PRESET_TILT_ANGLE_VALUES[m_presetIndex];
+			ApplyPreset(m_presetIndex);
 	}
 };
 
