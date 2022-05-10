@@ -788,6 +788,7 @@ Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
 	app->PushLayer<FluidLayer>();
 	app->PushLayer<GamepadControlsLayer>();
 	app->PushLayer<CommsLayer>();
+	app->PushLayer<LoggingLayer>();
 	app->SetMenubarCallback([app]()
 		{
 			if (ImGui::BeginMenu("File"))
