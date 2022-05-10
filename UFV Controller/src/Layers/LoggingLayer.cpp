@@ -28,6 +28,12 @@ void LoggingLayer::OnUIRender()
 	for (const auto& s : m_loggedStrings)
 		ImGui::Text(s.c_str());
 
+	if (m_shouldScroll)
+	{
+		ImGui::SetScrollHereY(1.0f);
+		m_shouldScroll = false;
+	}
+
 	ImGui::End();
 }
 
@@ -36,5 +42,6 @@ void LoggingLayer::Callback(const char* str, void* parameter)
 #define this _this
 	LoggingLayer* this = reinterpret_cast<LoggingLayer*>(parameter);
 	this->m_loggedStrings.emplace_back(str);
+	this->m_shouldScroll = true;
 #undef this
 }

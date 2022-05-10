@@ -8,6 +8,7 @@ class LoggingLayer : public Walnut::Layer
 {
 private:
 	std::vector<std::string> m_loggedStrings{};
+	bool m_shouldScroll = false;
 public:
 	virtual void OnAttach() override;
 	virtual void OnDetach() override;
