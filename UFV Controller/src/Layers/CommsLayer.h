@@ -12,13 +12,13 @@ class CommsLayer : public Walnut::Layer
 private:
 	ufv_state m_oldState = {};
 	int m_bufferedByte = -1;
-	RingBuffer<char> m_outgoingData{ 32 };
+	RingBuffer<char> m_outgoingData{ 16 };
 	std::chrono::steady_clock::time_point m_lastTilt;
 	std::chrono::steady_clock::time_point m_lastPan;
 	bool m_skippedTiltAngleDueToDebounce = false;
 	bool m_skippedPanAngleDueToDebounce = false;
 	char* m_recvBuffer = nullptr;
-	RingBuffer<std::string> m_incomingData{ 24 };
+	RingBuffer<std::string> m_incomingData{ 8 };
 	HANDLE m_comPort = 0;
 	char m_comPortBuffer[8] = {};
 private:
