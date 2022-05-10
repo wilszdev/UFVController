@@ -18,7 +18,7 @@ void Win32Log(const char* format, ...)
 	argp = nullptr;
 
 	strcat_s(fmtBuf, 0x1000, "\r\n");
-	
+
 	char buf[0x1000] = {};
 	strcat_s(buf, 0x1000, timeBuf);
 	strcat_s(buf, 0x1000, fmtBuf);
@@ -157,7 +157,7 @@ bool Win32WriteByteToComPort(HANDLE port, char byte)
 	// If it times out, then it will not have written
 	// the single byte, so writeCount will be zero
 	bool success = writeFileSuccess && writeCount == 1;
-	
+
 	if (!success)
 	{
 		if (!PurgeComm(port, PURGE_RXABORT | PURGE_TXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR))

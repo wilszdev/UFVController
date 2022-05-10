@@ -23,77 +23,77 @@ void Win32XInputLoad();
 
 struct stick_state
 {
-    float avgX;
-    float avgY;
+	float avgX;
+	float avgY;
 };
 
 struct button_state
 {
-    // state of button
-    bool isDown;
-    // press/release events: combination of current and previous state
-    bool released;
-    bool pressed;
+	// state of button
+	bool isDown;
+	// press/release events: combination of current and previous state
+	bool released;
+	bool pressed;
 };
 
 struct controller_input
 {
-    uint32_t isActive;
-    
-    union
-    {
-        stick_state sticks[2];
-        struct
-        {
-            stick_state leftStick;
-            stick_state rightStick;
-        };
-    };
+	uint32_t isActive;
 
-    union
-    {
-        float triggers[2];
-        struct
-        {
-            float leftTrigger;
-            float rightTrigger;
-        };
-    };
+	union
+	{
+		stick_state sticks[2];
+		struct
+		{
+			stick_state leftStick;
+			stick_state rightStick;
+		};
+	};
 
-    union
-    {
-        button_state buttons[14];
-        struct
-        {
-            button_state up;
-            button_state down;
-            button_state left;
-            button_state right;
+	union
+	{
+		float triggers[2];
+		struct
+		{
+			float leftTrigger;
+			float rightTrigger;
+		};
+	};
 
-            button_state A;
-            button_state B;
-            button_state X;
-            button_state Y;
+	union
+	{
+		button_state buttons[14];
+		struct
+		{
+			button_state up;
+			button_state down;
+			button_state left;
+			button_state right;
 
-            button_state lb;
-            button_state rb;
+			button_state A;
+			button_state B;
+			button_state X;
+			button_state Y;
 
-            button_state back;
-            button_state start;
+			button_state lb;
+			button_state rb;
 
-            button_state leftTriggerDigital;
-            button_state rightTriggerDigital;
+			button_state back;
+			button_state start;
 
-            // note: all buttons must be added above this line
-            // for array size check. fake button.
-            button_state terminator;
-        };
-    };
+			button_state leftTriggerDigital;
+			button_state rightTriggerDigital;
+
+			// note: all buttons must be added above this line
+			// for array size check. fake button.
+			button_state terminator;
+		};
+	};
 };
 
 void Win32XInputProcessDigitalButton(DWORD XInputButtonState,
-    button_state* oldState, DWORD buttonMask,
-    button_state* newState);
+	button_state* oldState, DWORD buttonMask,
+	button_state* newState);
 
 float Win32XInputProcessStickValue(SHORT stickValue, int deadzoneValue);
 
