@@ -62,6 +62,7 @@ void GamepadControlsLayer::OnUIRender()
 			ImGui::Text("RS (X)");
 			ImGui::Text("RS (Y)");
 			ImGui::Text("A");
+			ImGui::Text("X");
 			ImGui::Dummy({ 0,5 });
 			ImGui::Separator();
 			ImGui::Dummy({ 0,5 });
@@ -70,6 +71,7 @@ void GamepadControlsLayer::OnUIRender()
 			ImGui::Text("adjust nozzle pan");
 			ImGui::Text("adjust nozzle tilt");
 			ImGui::Text("pump on (hold)");
+			ImGui::Text("fire timed water burst");
 			ImGui::Dummy({ 0,5 });
 			ImGui::Separator();
 		}

@@ -3,7 +3,7 @@
 #include "Walnut/EntryPoint.h"
 #include "Layers/Layers.h"
 
-ufv_state g_ufvState = {};
+ufv_state g_ufvState = {0, 0, 0, false, false, 1000};
 
 void ApplyPreset(int index)
 {
@@ -25,7 +25,8 @@ Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
 	app->PushLayer<GamepadControlsLayer>();
 	app->PushLayer<CommsLayer>();
 	app->PushLayer<LoggingLayer>();
-	app->SetMenubarCallback([app]()
+	app->SetMenubarCallback(
+		[app]()
 		{
 			if (ImGui::BeginMenu("File"))
 			{
