@@ -1,7 +1,7 @@
 #include "Win32Helpers.h"
 
-LogCallback::log_callback_fn* LogCallback::callback;
-void* LogCallback::callbackParameter;
+log_callback_fn* g_logCallback = nullptr;
+void* g_logCallbackParameter = nullptr;
 
 void Win32Log(const char* format, ...)
 {
@@ -50,8 +50,8 @@ void Win32Log(const char* format, ...)
 		}
 	}
 
-	if (LogCallback::callback)
-		LogCallback::callback(buf, LogCallback::callbackParameter);
+	if (g_logCallback)
+		g_logCallback(buf, g_logCallbackParameter);
 }
 
 std::string Win32GetErrorCodeDescription(DWORD err)

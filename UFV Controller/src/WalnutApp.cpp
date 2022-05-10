@@ -10,7 +10,6 @@
 
 #define DELAY_MS 100
 
-
 struct ufv_state
 {
 	int drive;
@@ -19,7 +18,7 @@ struct ufv_state
 	bool pumpOn;
 };
 
-static ufv_state ufvState = {};
+static ufv_state g_ufvState = {};
 
 #define NUM_PRESETS 6
 const int PRESET_TILT_ANGLE_VALUES[NUM_PRESETS] = { -5,45,-5,45,-5,45 };
@@ -29,8 +28,8 @@ void ApplyPreset(int index)
 {
 	if (index < 0 || index > NUM_PRESETS - 1) return;
 
-	ufvState.tiltAngle = PRESET_TILT_ANGLE_VALUES[index];
-	ufvState.panAngle = PRESET_PAN_ANGLE_VALUES[index];
+	g_ufvState.tiltAngle = PRESET_TILT_ANGLE_VALUES[index];
+	g_ufvState.panAngle = PRESET_PAN_ANGLE_VALUES[index];
 }
 
 class DriveLayer : public Walnut::Layer
@@ -39,7 +38,7 @@ public:
 	virtual void OnUIRender() override
 	{
 		ImGui::Begin("Drive");
-		ImGui::SliderInt("##it's about drive, it's about power", &ufvState.drive, -1, 1, ufvState.drive == 0 ? "Brake" : (ufvState.drive == 1 ? "Forward" : "Reverse"));
+		ImGui::SliderInt("##it's about drive, it's about power", &g_ufvState.drive, -1, 1, g_ufvState.drive == 0 ? "Brake" : (g_ufvState.drive == 1 ? "Forward" : "Reverse"));
 		ImGui::End();
 	}
 };
@@ -51,46 +50,46 @@ public:
 	{
 		ImGui::Begin("Fluid Delivery");
 
-		ImGui::Checkbox("Pump", &ufvState.pumpOn);
+		ImGui::Checkbox("Pump", &g_ufvState.pumpOn);
 
 		ImGui::BeginChild("##AnglesAndPresets", { 0, 225 }, true);
 
 		{
 			ImGui::Text("Tilt Angle"); ImGui::SameLine(100);
-			ImGui::SliderInt("##TILT", &ufvState.tiltAngle, -5, 80);
+			ImGui::SliderInt("##TILT", &g_ufvState.tiltAngle, -5, 80);
 
 			ImGui::Dummy({ 0, 0 }); ImGui::SameLine(100);
 
 			if (ImGui::Button("Min##TILT", { 100, 0 }))
-				ufvState.tiltAngle = -5;
+				g_ufvState.tiltAngle = -5;
 			ImGui::SameLine();
 
 			if (ImGui::Button("Zero##TILT", { 100, 0 }))
-				ufvState.tiltAngle = 0;
+				g_ufvState.tiltAngle = 0;
 			ImGui::SameLine();
 
 			if (ImGui::Button("Max##TILT", { 100, 0 }))
-				ufvState.tiltAngle = 80;
+				g_ufvState.tiltAngle = 80;
 
 			ImGui::Spacing();
 			ImGui::Separator();
 			ImGui::Spacing();
 
 			ImGui::Text("Pan Angle"); ImGui::SameLine(100);
-			ImGui::SliderInt("##PAN", &ufvState.panAngle, -80, 80);
+			ImGui::SliderInt("##PAN", &g_ufvState.panAngle, -80, 80);
 
 			ImGui::Dummy({ 0, 0 }); ImGui::SameLine(100);
 
 			if (ImGui::Button("Min##PAN", { 100, 0 }))
-				ufvState.panAngle = -80;
+				g_ufvState.panAngle = -80;
 			ImGui::SameLine();
 
 			if (ImGui::Button("Zero##PAN", { 100, 0 }))
-				ufvState.panAngle = 0;
+				g_ufvState.panAngle = 0;
 			ImGui::SameLine();
 
 			if (ImGui::Button("Max##PAN", { 100, 0 }))
-				ufvState.panAngle = 80;
+				g_ufvState.panAngle = 80;
 
 			ImGui::Spacing();
 			ImGui::Separator();
@@ -110,7 +109,7 @@ public:
 					ImGui::SameLine();
 			}
 		}
-		
+
 		ImGui::EndChild();
 
 		ImGui::End();
@@ -263,9 +262,9 @@ private:
 
 		if (m_bufferedByte == -1)
 		{
-			if (ufvState.drive != m_oldState.drive)
+			if (g_ufvState.drive != m_oldState.drive)
 			{
-				switch (ufvState.drive)
+				switch (g_ufvState.drive)
 				{
 				case 0:
 				{
@@ -290,7 +289,7 @@ private:
 				}
 			}
 
-			if (ufvState.tiltAngle != m_oldState.tiltAngle)
+			if (g_ufvState.tiltAngle != m_oldState.tiltAngle)
 			{
 				std::chrono::nanoseconds diff = m_lastTilt - std::chrono::steady_clock::now();
 				size_t ms = diff.count() / 1000000;
@@ -300,10 +299,10 @@ private:
 					if (Win32WriteByteToComPort(m_comPort, 'T'))
 					{
 						m_outgoingData.Write('T');
-						if (Win32WriteByteToComPort(m_comPort, (char)ufvState.tiltAngle))
-							m_outgoingData.Write((char)ufvState.tiltAngle);
+						if (Win32WriteByteToComPort(m_comPort, (char)g_ufvState.tiltAngle))
+							m_outgoingData.Write((char)g_ufvState.tiltAngle);
 						else
-							m_bufferedByte = (int)(ufvState.tiltAngle & 0xFF);
+							m_bufferedByte = (int)(g_ufvState.tiltAngle & 0xFF);
 
 						m_lastTilt = std::chrono::steady_clock::now();
 					}
@@ -312,7 +311,7 @@ private:
 					m_skippedTiltAngleDueToDebounce = true;
 			}
 
-			if (ufvState.panAngle != m_oldState.panAngle)
+			if (g_ufvState.panAngle != m_oldState.panAngle)
 			{
 				std::chrono::nanoseconds diff = m_lastPan - std::chrono::steady_clock::now();
 				size_t ms = diff.count() / 1000000;
@@ -322,10 +321,10 @@ private:
 					if (Win32WriteByteToComPort(m_comPort, 'A'))
 					{
 						m_outgoingData.Write('A');
-						if (Win32WriteByteToComPort(m_comPort, (char)ufvState.panAngle))
-							m_outgoingData.Write((char)ufvState.panAngle);
+						if (Win32WriteByteToComPort(m_comPort, (char)g_ufvState.panAngle))
+							m_outgoingData.Write((char)g_ufvState.panAngle);
 						else
-							m_bufferedByte = (int)(ufvState.panAngle & 0xFF);
+							m_bufferedByte = (int)(g_ufvState.panAngle & 0xFF);
 
 						m_lastPan = std::chrono::steady_clock::now();
 					}
@@ -334,9 +333,9 @@ private:
 					m_skippedPanAngleDueToDebounce = true;
 			}
 
-			if (ufvState.pumpOn != m_oldState.pumpOn)
+			if (g_ufvState.pumpOn != m_oldState.pumpOn)
 			{
-				if (ufvState.pumpOn)
+				if (g_ufvState.pumpOn)
 				{
 					if (Win32WriteByteToComPort(m_comPort, 'P'))
 						m_outgoingData.Write('P');
@@ -365,7 +364,7 @@ private:
 				Win32Log("[DoIncomingComms] ReadFile() failed with error %d: %s", GetLastError(), Win32GetErrorCodeDescription(GetLastError()).c_str());
 			totalRead += bytesRead;
 		} while (bytesRead);
-		
+
 		if (totalRead && *m_recvBuffer)
 			m_incomingData.Write(std::string{ m_recvBuffer });
 	}
@@ -404,7 +403,7 @@ public:
 		}
 
 		ImGui::BeginTabBar("asdfasdfasdf");
-		
+
 		if (ImGui::BeginTabItem("Outgoing Comms"))
 		{
 
@@ -466,7 +465,7 @@ public:
 		int tmpP = m_oldState.panAngle;
 		int tmpT = m_oldState.tiltAngle;
 
-		memcpy(&m_oldState, &ufvState, sizeof(ufv_state));
+		memcpy(&m_oldState, &g_ufvState, sizeof(ufv_state));
 
 		if (m_skippedPanAngleDueToDebounce)
 			m_oldState.panAngle = tmpP;
@@ -523,9 +522,9 @@ public:
 		ImGui::Dummy({ 0, 5 });
 
 		ImGui::Text("Sensitivity Parameters");
-		ImGui::SliderFloat("angleX",  & m_angleSensitivityX, -10.0f, 10.0f);
-		ImGui::SliderFloat("angleY",  & m_angleSensitivityY, -10.0f, 10.0f);
-		ImGui::SliderFloat("power",  & m_powerSensitivity, -10.0f, 10.0f);
+		ImGui::SliderFloat("angleX", &m_angleSensitivityX, -10.0f, 10.0f);
+		ImGui::SliderFloat("angleY", &m_angleSensitivityY, -10.0f, 10.0f);
+		ImGui::SliderFloat("power", &m_powerSensitivity, -10.0f, 10.0f);
 		ImGui::Dummy({ 0, 5 });
 
 		ImGui::Text("Controller Input State");
@@ -689,30 +688,30 @@ private:
 
 	void ActOnInput()
 	{
-		if (m_newController->A.pressed && !ufvState.pumpOn)
-			ufvState.pumpOn = true;
+		if (m_newController->A.pressed && !g_ufvState.pumpOn)
+			g_ufvState.pumpOn = true;
 
-		if (m_newController->A.released && ufvState.pumpOn)
-			ufvState.pumpOn = false;
+		if (m_newController->A.released && g_ufvState.pumpOn)
+			g_ufvState.pumpOn = false;
 
-		if (ufvState.drive == 0 && m_newController->rightTriggerDigital.pressed && !m_newController->leftTriggerDigital.pressed)
-			ufvState.drive = 1;
-		if (ufvState.drive == 1 && m_newController->rightTriggerDigital.released)
-			ufvState.drive = 0;
+		if (g_ufvState.drive == 0 && m_newController->rightTriggerDigital.pressed && !m_newController->leftTriggerDigital.pressed)
+			g_ufvState.drive = 1;
+		if (g_ufvState.drive == 1 && m_newController->rightTriggerDigital.released)
+			g_ufvState.drive = 0;
 
-		if (ufvState.drive == 0 && m_newController->leftTriggerDigital.pressed && !m_newController->rightTriggerDigital.pressed)
-			ufvState.drive = -1;
-		if (ufvState.drive == -1 && m_newController->leftTriggerDigital.released)
-			ufvState.drive = 0;
+		if (g_ufvState.drive == 0 && m_newController->leftTriggerDigital.pressed && !m_newController->rightTriggerDigital.pressed)
+			g_ufvState.drive = -1;
+		if (g_ufvState.drive == -1 && m_newController->leftTriggerDigital.released)
+			g_ufvState.drive = 0;
 
 		if (m_newController->rightStick.avgX != 0.0)
 		{
 			float diff = m_newController->rightStick.avgX * m_angleSensitivityX;
 			int truncDiff = (int)diff;
-			
-			ufvState.panAngle += truncDiff;
-			if (ufvState.panAngle > 80) ufvState.panAngle = 80;
-			else if (ufvState.panAngle < -80) ufvState.panAngle = -80;
+
+			g_ufvState.panAngle += truncDiff;
+			if (g_ufvState.panAngle > 80) g_ufvState.panAngle = 80;
+			else if (g_ufvState.panAngle < -80) g_ufvState.panAngle = -80;
 		}
 
 		if (m_newController->rightStick.avgY != 0.0)
@@ -720,9 +719,9 @@ private:
 			float diff = m_newController->rightStick.avgY * m_angleSensitivityY;
 			int truncDiff = (int)diff;
 
-			ufvState.tiltAngle += truncDiff;
-			if (ufvState.tiltAngle > 80) ufvState.tiltAngle = 80;
-			else if (ufvState.tiltAngle < -5) ufvState.tiltAngle = -5;
+			g_ufvState.tiltAngle += truncDiff;
+			if (g_ufvState.tiltAngle > 80) g_ufvState.tiltAngle = 80;
+			else if (g_ufvState.tiltAngle < -5) g_ufvState.tiltAngle = -5;
 		}
 
 		if (m_newController->right.pressed)
@@ -743,19 +742,19 @@ private:
 public:
 	virtual void OnAttach() override
 	{
-		if (LogCallback::callback == nullptr && LogCallback::callbackParameter == nullptr)
+		if (g_logCallback == nullptr && g_logCallbackParameter == nullptr)
 		{
-			LogCallback::callback = Callback;
-			LogCallback::callbackParameter = this;
+			g_logCallback = Callback;
+			g_logCallbackParameter = this;
 		}
 	}
 
 	virtual void OnDetach() override
 	{
-		if (LogCallback::callbackParameter == this)
+		if (g_logCallbackParameter == this)
 		{
-			LogCallback::callback = nullptr;
-			LogCallback::callbackParameter = nullptr;
+			g_logCallback = nullptr;
+			g_logCallbackParameter = nullptr;
 		}
 	}
 
@@ -790,15 +789,15 @@ Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
 	app->PushLayer<GamepadControlsLayer>();
 	app->PushLayer<CommsLayer>();
 	app->SetMenubarCallback([app]()
-	{
-		if (ImGui::BeginMenu("File"))
 		{
-			if (ImGui::MenuItem("Exit"))
+			if (ImGui::BeginMenu("File"))
 			{
-				app->Close();
+				if (ImGui::MenuItem("Exit"))
+				{
+					app->Close();
+				}
+				ImGui::EndMenu();
 			}
-			ImGui::EndMenu();
-		}
-	});
+		});
 	return app;
 }
