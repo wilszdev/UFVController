@@ -38,10 +38,10 @@ RingBuffer<T>::~RingBuffer()
 template<typename T>
 void RingBuffer<T>::Write(const T& value)
 {
-	m_data[head] = value;
-	m_head = (m_head + 1) % RINGBUF_SIZE;
+	m_data[m_head] = value;
+	m_head = (m_head + 1) % m_size;
 	if (m_tail == m_head) // full
-		m_tail = (m_tail + 1) % RINGBUF_SIZE;
+		m_tail = (m_tail + 1) % m_size;
 }
 
 template<typename T>
