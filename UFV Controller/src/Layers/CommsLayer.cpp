@@ -11,91 +11,90 @@ void CommsLayer::DoOutgoingComms()
 		if (Win32WriteByteToComPort(m_comPort, m_bufferedByte & 0xFF))
 			m_bufferedByte = -1;
 
-	if (m_bufferedByte == -1)
+	if (m_bufferedByte != -1) return; 
+
+	if (g_ufvState.drive != m_oldState.drive)
 	{
-		if (g_ufvState.drive != m_oldState.drive)
+		switch (g_ufvState.drive)
 		{
-			switch (g_ufvState.drive)
+		case 0:
+		{
+			if (Win32WriteByteToComPort(m_comPort, 'X'))
+				m_outgoingData.Write('X');
+			break;
+		}
+		case 1:
+		{
+			if (Win32WriteByteToComPort(m_comPort, 'F'))
+				m_outgoingData.Write('F');
+			break;
+		}
+		case -1:
+		{
+			if (Win32WriteByteToComPort(m_comPort, 'B'))
+				m_outgoingData.Write('B');
+			break;
+		}
+		default:
+			break;
+		}
+	}
+
+	if (g_ufvState.tiltAngle != m_oldState.tiltAngle)
+	{
+		std::chrono::nanoseconds diff = m_lastTilt - std::chrono::steady_clock::now();
+		size_t ms = diff.count() / 1000000;
+
+		if (ms > ANGLE_DEBOUNCE_DELAY_MS)
+		{
+			if (Win32WriteByteToComPort(m_comPort, 'T'))
 			{
-			case 0:
-			{
-				if (Win32WriteByteToComPort(m_comPort, 'X'))
-					m_outgoingData.Write('X');
-				break;
-			}
-			case 1:
-			{
-				if (Win32WriteByteToComPort(m_comPort, 'F'))
-					m_outgoingData.Write('F');
-				break;
-			}
-			case -1:
-			{
-				if (Win32WriteByteToComPort(m_comPort, 'B'))
-					m_outgoingData.Write('B');
-				break;
-			}
-			default:
-				break;
+				m_outgoingData.Write('T');
+				if (Win32WriteByteToComPort(m_comPort, (char)g_ufvState.tiltAngle))
+					m_outgoingData.Write((char)g_ufvState.tiltAngle);
+				else
+					m_bufferedByte = (int)(g_ufvState.tiltAngle & 0xFF);
+
+				m_lastTilt = std::chrono::steady_clock::now();
 			}
 		}
+		else
+			m_skippedTiltAngleDueToDebounce = true;
+	}
 
-		if (g_ufvState.tiltAngle != m_oldState.tiltAngle)
+	if (g_ufvState.panAngle != m_oldState.panAngle)
+	{
+		std::chrono::nanoseconds diff = m_lastPan - std::chrono::steady_clock::now();
+		size_t ms = diff.count() / 1000000;
+
+		if (ms > ANGLE_DEBOUNCE_DELAY_MS)
 		{
-			std::chrono::nanoseconds diff = m_lastTilt - std::chrono::steady_clock::now();
-			size_t ms = diff.count() / 1000000;
-
-			if (ms > ANGLE_DEBOUNCE_DELAY_MS)
+			if (Win32WriteByteToComPort(m_comPort, 'A'))
 			{
-				if (Win32WriteByteToComPort(m_comPort, 'T'))
-				{
-					m_outgoingData.Write('T');
-					if (Win32WriteByteToComPort(m_comPort, (char)g_ufvState.tiltAngle))
-						m_outgoingData.Write((char)g_ufvState.tiltAngle);
-					else
-						m_bufferedByte = (int)(g_ufvState.tiltAngle & 0xFF);
+				m_outgoingData.Write('A');
+				if (Win32WriteByteToComPort(m_comPort, (char)g_ufvState.panAngle))
+					m_outgoingData.Write((char)g_ufvState.panAngle);
+				else
+					m_bufferedByte = (int)(g_ufvState.panAngle & 0xFF);
 
-					m_lastTilt = std::chrono::steady_clock::now();
-				}
+				m_lastPan = std::chrono::steady_clock::now();
 			}
-			else
-				m_skippedTiltAngleDueToDebounce = true;
 		}
+		else
+			m_skippedPanAngleDueToDebounce = true;
+	}
 
-		if (g_ufvState.panAngle != m_oldState.panAngle)
+	if (g_ufvState.pumpOn != m_oldState.pumpOn)
+	{
+		if (g_ufvState.pumpOn)
 		{
-			std::chrono::nanoseconds diff = m_lastPan - std::chrono::steady_clock::now();
-			size_t ms = diff.count() / 1000000;
-
-			if (ms > ANGLE_DEBOUNCE_DELAY_MS)
-			{
-				if (Win32WriteByteToComPort(m_comPort, 'A'))
-				{
-					m_outgoingData.Write('A');
-					if (Win32WriteByteToComPort(m_comPort, (char)g_ufvState.panAngle))
-						m_outgoingData.Write((char)g_ufvState.panAngle);
-					else
-						m_bufferedByte = (int)(g_ufvState.panAngle & 0xFF);
-
-					m_lastPan = std::chrono::steady_clock::now();
-				}
-			}
-			else
-				m_skippedPanAngleDueToDebounce = true;
+			if (Win32WriteByteToComPort(m_comPort, 'P'))
+				m_outgoingData.Write('P');
 		}
-
-		if (g_ufvState.pumpOn != m_oldState.pumpOn)
+		else
 		{
-			if (g_ufvState.pumpOn)
-			{
-				if (Win32WriteByteToComPort(m_comPort, 'P'))
-					m_outgoingData.Write('P');
-			}
-			else
-			{
-				if (Win32WriteByteToComPort(m_comPort, 'N'))
-					m_outgoingData.Write('N');
-			}
+			if (Win32WriteByteToComPort(m_comPort, 'N'))
+				m_outgoingData.Write('N');
 		}
 	}
 }
