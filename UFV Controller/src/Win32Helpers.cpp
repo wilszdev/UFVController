@@ -171,7 +171,7 @@ bool Win32WriteByteToComPort(HANDLE port, char byte)
 	}
 
 	if (!success)
-		Win32Log("[Win32WriteByteToComPort] Failed to write byte 0x%x.", (int)byte);
+		Win32Log("[Win32WriteByteToComPort] Failed to write byte 0x%02x.", (int)byte & 0xFF);
 
 	if (!ClearCommBreak(port))
 		Win32Log("[Win32WriteByteToComPort] ClearCommBreak() failed with error %d: %s", GetLastError(), Win32GetErrorCodeDescription(GetLastError()).c_str());
