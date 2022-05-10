@@ -189,6 +189,9 @@ void InputLayer::ActOnInput()
 	if (m_newController->A.released && g_ufvState.pumpOn)
 		g_ufvState.pumpOn = false;
 
+	if (m_newController->X.pressed && !g_ufvState.pumpOn)
+		g_ufvState.shouldBurst = true;
+
 	if (g_ufvState.drive == 0 && m_newController->rightTriggerDigital.pressed && !m_newController->leftTriggerDigital.pressed)
 		g_ufvState.drive = 1;
 	if (g_ufvState.drive == 1 && m_newController->rightTriggerDigital.released)
