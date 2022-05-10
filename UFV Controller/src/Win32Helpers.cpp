@@ -159,23 +159,13 @@ bool Win32WriteByteToComPort(HANDLE port, char byte)
 	bool success = writeFileSuccess && writeCount == 1;
 
 	if (!success)
-	{
-		if (!PurgeComm(port, PURGE_RXABORT | PURGE_TXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR))
-			Win32Log("[Win32WriteByteToComPort] PurgeComm() failed with error %d: %s\n", GetLastError(), Win32GetErrorCodeDescription(GetLastError()).c_str());
-
-		writeFileSuccess = WriteFile(port, &byte, 1, &writeCount, 0) & 1;
-		if (!writeFileSuccess)
-			Win32Log("[Win32WriteByteToComPort] WriteFile() failed again with error %d: %s", GetLastError(), Win32GetErrorCodeDescription(GetLastError()).c_str());
-
-		success = writeFileSuccess && writeCount == 1;
-	}
-
-	if (!success)
 		Win32Log("[Win32WriteByteToComPort] Failed to write byte 0x%02x.", (int)byte & 0xFF);
 
-	if (!ClearCommBreak(port))
-		Win32Log("[Win32WriteByteToComPort] ClearCommBreak() failed with error %d: %s", GetLastError(), Win32GetErrorCodeDescription(GetLastError()).c_str());
+	return success;
+}
 
+bool Win32CommHasErrors(HANDLE port)
+{
 	DWORD errors = 0;
 	if (!ClearCommError(port, &errors, 0))
 		Win32Log("[Win32WriteByteToComPort] ClearCommError() failed with error %d: %s", GetLastError(), Win32GetErrorCodeDescription(GetLastError()).c_str());
@@ -184,25 +174,25 @@ bool Win32WriteByteToComPort(HANDLE port, char byte)
 	{
 		if (errors & CE_BREAK)
 		{
-			Win32Log("[Win32WriteByteToComPort] Comm Error: CE_BREAK");
+			Win32Log("[Win32CommHasErrors] Comm Error: CE_BREAK");
 		}
 		if (errors & CE_FRAME)
 		{
-			Win32Log("[Win32WriteByteToComPort] Comm Error: CE_FRAME");
+			Win32Log("[Win32CommHasErrors] Comm Error: CE_FRAME");
 		}
 		if (errors & CE_OVERRUN)
 		{
-			Win32Log("[Win32WriteByteToComPort] Comm Error: CE_OVERRUN");
+			Win32Log("[Win32CommHasErrors] Comm Error: CE_OVERRUN");
 		}
 		if (errors & CE_RXOVER)
 		{
-			Win32Log("[Win32WriteByteToComPort] Comm Error: CE_RXOVER");
+			Win32Log("[Win32CommHasErrors] Comm Error: CE_RXOVER");
 		}
 		if (errors & CE_RXPARITY)
 		{
-			Win32Log("[Win32WriteByteToComPort] Comm Error: CE_RXPARITY");
+			Win32Log("[Win32CommHasErrors] Comm Error: CE_RXPARITY");
 		}
 	}
 
-	return success;
+	return errors != 0;
 }
