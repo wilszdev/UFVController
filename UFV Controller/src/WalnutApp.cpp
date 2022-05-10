@@ -234,8 +234,6 @@ class CommsLayer : public Walnut::Layer
 #define RECV_SIZE 0x4000
 private:
 	ufv_state m_oldState = {};
-	bool m_spamData = false;
-	int m_spamCount = 0;
 	int m_bufferedByte = -1;
 	RingBuffer<char> m_outgoingData{ 32 };
 	std::chrono::steady_clock::time_point m_lastTilt;
@@ -250,20 +248,6 @@ private:
 	void DoOutgoingComms()
 	{
 		if (!m_comPort) return;
-
-		if (m_spamData)
-		{
-			if (Win32WriteByteToComPort(m_comPort, (char)0xAB))
-			{
-				m_outgoingData.Write((char)0xAB);
-				++m_spamCount;
-			}
-			else
-			{
-				Win32Log("[SPAM DATA] Spam failed after %d bytes were written.", m_spamCount);
-				m_spamData = false;
-			}
-		}
 
 		if (m_bufferedByte != -1)
 			if (Win32WriteByteToComPort(m_comPort, m_bufferedByte & 0xFF))
@@ -409,11 +393,6 @@ public:
 				m_comPort = 0;
 				m_comPort = Win32OpenAndConfigureComPort(m_comPortBuffer);
 			}
-
-			if (ImGui::Checkbox("spam", &m_spamData))
-				m_spamCount = 0;
-			ImGui::SameLine();
-			ImGui::Text("SpamCount: %d", m_spamCount);
 		}
 
 		ImGui::BeginTabBar("asdfasdfasdf");
