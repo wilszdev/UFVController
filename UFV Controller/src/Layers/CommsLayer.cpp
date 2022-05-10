@@ -1,6 +1,8 @@
 #include "CommsLayer.h"
 #include "../Win32Helpers.h"
 
+#define COMMS_RECV_BUFFER_SIZE 0x1000
+
 void CommsLayer::DoOutgoingComms()
 {
 	if (!m_comPort) return;
@@ -102,14 +104,14 @@ void CommsLayer::DoIncomingComms()
 {
 	if (!m_comPort) return;
 
-	memset(m_recvBuffer, 0, RECV_SIZE);
+	memset(m_recvBuffer, 0, COMMS_RECV_BUFFER_SIZE);
 
 	size_t totalRead = 0;
 
 	DWORD bytesRead = 0;
 	do
 	{
-		if (!ReadFile(m_comPort, m_recvBuffer + totalRead, RECV_SIZE - 1 - totalRead, &bytesRead, 0))
+		if (!ReadFile(m_comPort, m_recvBuffer + totalRead, COMMS_RECV_BUFFER_SIZE - 1 - totalRead, &bytesRead, 0))
 			Win32Log("[DoIncomingComms] ReadFile() failed with error %d: %s", GetLastError(), Win32GetErrorCodeDescription(GetLastError()).c_str());
 		totalRead += bytesRead;
 	} while (bytesRead);
@@ -224,7 +226,7 @@ void CommsLayer::OnUIRender()
 
 void CommsLayer::OnAttach()
 {
-	m_recvBuffer = new char[RECV_SIZE];
+	m_recvBuffer = new char[COMMS_RECV_BUFFER_SIZE];
 }
 
 void CommsLayer::OnDetach()

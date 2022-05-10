@@ -9,7 +9,6 @@
 
 class CommsLayer : public Walnut::Layer
 {
-#define RECV_SIZE 0x4000
 private:
 	ufv_state m_oldState = {};
 	int m_bufferedByte = -1;
