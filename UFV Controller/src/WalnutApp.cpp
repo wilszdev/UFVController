@@ -396,21 +396,7 @@ public:
 		}
 
 		ImGui::BeginTabBar("asdfasdfasdf");
-		if (ImGui::BeginTabItem("Incoming Comms"))
-		{
-			for (int i = m_incomingData.m_tail;
-				i < ((m_incomingData.m_head + 1 == m_incomingData.m_tail)
-					? m_incomingData.m_tail + m_incomingData.m_size - 1
-					: m_incomingData.m_tail + m_incomingData.m_head);
-				++i)
-			{
-				const std::string& str = m_incomingData.m_data[i % m_incomingData.m_size];
-				ImGui::Text(str.c_str());
-			}
-
-			ImGui::EndTabItem();
-		}
-
+		
 		if (ImGui::BeginTabItem("Outgoing Comms"))
 		{
 
@@ -445,6 +431,21 @@ public:
 				}
 
 				ImGui::EndTable();
+			}
+
+			ImGui::EndTabItem();
+		}
+
+		if (ImGui::BeginTabItem("Incoming Comms"))
+		{
+			for (int i = m_incomingData.m_tail;
+				i < ((m_incomingData.m_head + 1 == m_incomingData.m_tail)
+					? m_incomingData.m_tail + m_incomingData.m_size - 1
+					: m_incomingData.m_tail + m_incomingData.m_head);
+				++i)
+			{
+				const std::string& str = m_incomingData.m_data[i % m_incomingData.m_size];
+				ImGui::Text(str.c_str());
 			}
 
 			ImGui::EndTabItem();
