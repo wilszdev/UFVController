@@ -9,15 +9,15 @@
 #define X_INPUT_GET_STATE_FN(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_STATE* pState)
 typedef X_INPUT_GET_STATE_FN(x_input_get_state_fn);
 X_INPUT_GET_STATE_FN(XInputGetStateStub);
-extern x_input_get_state_fn* XInputGetState_;
-#define XInputGetState XInputGetState_
+extern x_input_get_state_fn* g_XInputGetState;
+#define XInputGetState g_XInputGetState
 
 // XInputSetState
 #define X_INPUT_SET_STATE_FN(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_VIBRATION* pVibration)
 typedef X_INPUT_SET_STATE_FN(x_input_set_state_fn);
 X_INPUT_SET_STATE_FN(XInputSetStateStub);
-extern x_input_set_state_fn* XInputSetState_;
-#define XInputSetState XInputSetState_
+extern x_input_set_state_fn* g_XInputSetState;
+#define XInputSetState g_XInputSetState
 
 void Win32XInputLoad();
 

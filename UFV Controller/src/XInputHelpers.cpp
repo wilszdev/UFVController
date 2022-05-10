@@ -2,8 +2,8 @@
 
 X_INPUT_GET_STATE_FN(XInputGetStateStub) { return ERROR_DEVICE_NOT_CONNECTED; }
 X_INPUT_SET_STATE_FN(XInputSetStateStub) { return ERROR_DEVICE_NOT_CONNECTED; }
-x_input_get_state_fn* XInputGetState_ = XInputGetStateStub;
-x_input_set_state_fn* XInputSetState_ = XInputSetStateStub;
+x_input_get_state_fn* g_XInputGetState = XInputGetStateStub;
+x_input_set_state_fn* g_XInputSetState = XInputSetStateStub;
 
 
 void Win32XInputLoad()
