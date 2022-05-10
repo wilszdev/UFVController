@@ -23,7 +23,10 @@ void Win32Log(const char* format, ...)
 	strcat_s(buf, 0x1000, timeBuf);
 	strcat_s(buf, 0x1000, fmtBuf);
 
+#ifndef WL_DIST // dont need a printf if there's no console
 	printf("%s", buf);
+#endif
+
 	OutputDebugStringA(buf);
 
 	char path[MAX_PATH + 1] = {};
