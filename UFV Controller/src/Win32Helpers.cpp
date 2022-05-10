@@ -1,5 +1,8 @@
 #include "Win32Helpers.h"
 
+LogCallback::log_callback_fn* LogCallback::callback;
+void* LogCallback::callbackParameter;
+
 void Win32Log(const char* format, ...)
 {
 	SYSTEMTIME time = {};
@@ -43,6 +46,9 @@ void Win32Log(const char* format, ...)
 			}
 		}
 	}
+
+	if (LogCallback::callback)
+		LogCallback::callback(buf, LogCallback::callbackParameter);
 }
 
 std::string Win32GetErrorCodeDescription(DWORD err)
