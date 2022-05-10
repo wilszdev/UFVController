@@ -8,8 +8,15 @@ void CommsLayer::DoOutgoingComms()
 	if (!m_comPort) return;
 
 	if (m_bufferedByte != -1)
-		if (Win32WriteByteToComPort(m_comPort, m_bufferedByte & 0xFF))
+	{
+		++m_bufferedByteFailCount;
+		if (m_bufferedByteFailCount > m_bufferedByteRetryCount ||
+			Win32WriteByteToComPort(m_comPort, m_bufferedByte & 0xFF))
+		{
 			m_bufferedByte = -1;
+			m_bufferedByteFailCount = 0;
+		}
+	}
 
 	if (m_bufferedByte != -1) return; 
 
@@ -156,6 +163,22 @@ void CommsLayer::OnUIRender()
 
 	if (ImGui::BeginTabItem("Outgoing Comms"))
 	{
+		ImGui::Text("Buffered byte retry count"); ImGui::SameLine();
+
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::BeginTooltip();
+			ImGui::PushTextWrapPos(ImGui::GetFontSize() * 16.0f);
+			ImGui::TextUnformatted("If a write fails and is buffered, it will be retried this many times before the byte is discarded.");
+			ImGui::PopTextWrapPos();
+			ImGui::EndTooltip();
+		}
+
+		ImGui::SliderInt("##bbfailthreshold", &m_bufferedByteRetryCount, 0, 25);
+
+		ImGui::Spacing();
+		ImGui::Separator();
+		ImGui::Spacing();
 
 		if (ImGui::BeginTable("outgoing ringbuffer", 4))
 		{
