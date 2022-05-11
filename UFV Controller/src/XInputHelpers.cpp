@@ -8,26 +8,31 @@ x_input_set_state_fn* g_XInputSetState = XInputSetStateStub;
 
 void Win32XInputLoad()
 {
-	HMODULE XInputLib = LoadLibraryA("xinput1_4.dll");
-	if (!XInputLib)
+	const char* names[] =
 	{
-		Win32Log("[Win32XInputLoad] Could not find xinput1_4.dll");
-		XInputLib = LoadLibraryA("xinput9_1_0.dll");
+		"xinput1_4.dll",
+		"xinput1_3.dll",
+		"xinput9_1_0.dll",
+		"xinput1_2.dll",
+		"xinput1_1.dll",
+	};
+
+	HMODULE xinput = 0;
+	int i;
+	for (i = 0; !xinput && i < sizeof(names) / sizeof(*names); ++i)
+	{
+		xinput = LoadLibraryA(names[i]);
 	}
-	if (!XInputLib)
+	
+	if (xinput)
 	{
-		Win32Log("[Win32XInputLoad] Could not find xinput1_0.dll");
-		XInputLib = LoadLibraryA("xinput1_3.dll");
-	}
-	if (XInputLib)
-	{
-		XInputGetState = (x_input_get_state_fn*)GetProcAddress(XInputLib, "XInputGetState");
-		XInputSetState = (x_input_set_state_fn*)GetProcAddress(XInputLib, "XInputSetState");
+		XInputGetState = (x_input_get_state_fn*)GetProcAddress(xinput, "XInputGetState");
+		XInputSetState = (x_input_set_state_fn*)GetProcAddress(xinput, "XInputSetState");
+		Win32Log("[Win32XInputLoad] Using %s", names[i - 1]);
 	}
 	else
 	{
-		Win32Log("[Win32XInputLoad] Could not find xinput1_3.dll");
-		Win32Log("[Win32XInputLoad] No XInput found");
+		Win32Log("[Win32XInputLoad] Could not find an xinput dll");
 	}
 }
 
