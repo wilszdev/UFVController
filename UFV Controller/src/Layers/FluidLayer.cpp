@@ -9,7 +9,7 @@ void FluidLayer::OnUIRender()
 {
 	ImGui::Begin("Fluid Delivery");
 
-	ImGui::Checkbox("Pump on", &g_ufvState.pumpOn); ImGui::SameLine();
+	ImGui::Checkbox("Pump on", &g_ufvState.pumpOn);
 
 	ImGui::BeginChild("##AnglesAndPresets", { 0, 225 }, true);
 
