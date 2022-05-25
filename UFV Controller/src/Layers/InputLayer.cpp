@@ -189,6 +189,8 @@ void InputLayer::ActOnInput()
 	if (m_newController->A.released && g_ufvState.pumpOn)
 		g_ufvState.pumpOn = false;
 
+	if (m_newController->Y.pressed)
+		Win32Log("[PRESET LOGGING] New preset: %d degrees pan / %d degrees tilt.", g_ufvState.panAngle, g_ufvState.tiltAngle);
 
 	if (g_ufvState.drive == 0 && m_newController->rightTriggerDigital.pressed && !m_newController->leftTriggerDigital.pressed)
 		g_ufvState.drive = 1;
