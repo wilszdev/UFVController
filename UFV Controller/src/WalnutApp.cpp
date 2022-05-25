@@ -3,7 +3,7 @@
 #include "Walnut/EntryPoint.h"
 #include "Layers/Layers.h"
 
-ufv_state g_ufvState = {0, 0, 0, false, false, 1000};
+ufv_state g_ufvState = { 0, 0, 0, false };
 
 void ApplyPreset(int index)
 {

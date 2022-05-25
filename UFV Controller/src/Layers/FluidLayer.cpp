@@ -11,12 +11,6 @@ void FluidLayer::OnUIRender()
 
 	ImGui::Checkbox("Pump on", &g_ufvState.pumpOn); ImGui::SameLine();
 
-	if (ImGui::Button("Fire a short burst"))
-		g_ufvState.shouldBurst = true;
-
-	ImGui::Text("Burst duration"); ImGui::SameLine();
-	ImGui::SliderInt("##burstdur", &g_ufvState.burstDuration, 100, 5000);
-
 	ImGui::BeginChild("##AnglesAndPresets", { 0, 225 }, true);
 
 	{

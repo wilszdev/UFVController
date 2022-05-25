@@ -104,33 +104,6 @@ void CommsLayer::DoOutgoingComms()
 				m_outgoingData.Write('N');
 		}
 	}
-
-	if (g_ufvState.burstDuration != m_oldState.burstDuration)
-	{
-		if (Win32WriteByteToComPort(m_comPort, 'S'))
-		{
-			m_outgoingData.Write('S');
-
-			char lo = g_ufvState.burstDuration & 0xFF;
-			char hi = (g_ufvState.burstDuration & 0xFF00) >> 8;
-
-			if (Win32WriteByteToComPort(m_comPort, lo))
-			{
-				m_outgoingData.Write(lo);
-				if (Win32WriteByteToComPort(m_comPort, hi))
-					m_outgoingData.Write(hi);
-			}
-		}
-	}
-
-	if (g_ufvState.shouldBurst && !m_oldState.shouldBurst)
-	{
-		if (Win32WriteByteToComPort(m_comPort, 'Z'))
-		{
-			m_outgoingData.Write('Z');
-			g_ufvState.shouldBurst = false;
-		}
-	}
 }
 
 void CommsLayer::DoIncomingComms()

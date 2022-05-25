@@ -6,8 +6,6 @@ struct ufv_state
 	int panAngle;
 	int tiltAngle;
 	bool pumpOn;
-	bool shouldBurst;
-	int burstDuration;
 };
 
 extern ufv_state g_ufvState;
