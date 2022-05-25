@@ -6,6 +6,7 @@ struct ufv_state
 	int panAngle;
 	int tiltAngle;
 	bool pumpOn;
+	int motorPower;
 };
 
 extern ufv_state g_ufvState;

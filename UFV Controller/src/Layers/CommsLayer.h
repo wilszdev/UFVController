@@ -17,8 +17,10 @@ private:
 	RingBuffer<char> m_outgoingData{ 8 };
 	std::chrono::steady_clock::time_point m_lastTilt;
 	std::chrono::steady_clock::time_point m_lastPan;
+	std::chrono::steady_clock::time_point m_lastMotorPower;
 	bool m_skippedTiltAngleDueToDebounce = false;
 	bool m_skippedPanAngleDueToDebounce = false;
+	bool m_skippedMotorPowerDueToDebounce = false;
 	char* m_recvBuffer = nullptr;
 	RingBuffer<std::string> m_incomingData{ 8 };
 	HANDLE m_comPort = 0;

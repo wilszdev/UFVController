@@ -59,19 +59,33 @@ void GamepadControlsLayer::OnUIRender()
 		{
 			ImGui::TableNextRow();
 			ImGui::TableSetColumnIndex(0);
+			ImGui::Text("LS (Y)");
 			ImGui::Text("RS (X)");
 			ImGui::Text("RS (Y)");
-			ImGui::Text("A");
-			ImGui::Text("X");
 			ImGui::Dummy({ 0,5 });
 			ImGui::Separator();
 			ImGui::Dummy({ 0,5 });
 
 			ImGui::TableNextColumn();
+			ImGui::Text("adjust motor power");
 			ImGui::Text("adjust nozzle pan");
 			ImGui::Text("adjust nozzle tilt");
+			ImGui::Dummy({ 0,5 });
+			ImGui::Separator();
+		}
+
+		{
+			ImGui::TableNextRow();
+			ImGui::TableSetColumnIndex(0);
+			ImGui::Text("A");
+			ImGui::Text("Y");
+			ImGui::Dummy({ 0,5 });
+			ImGui::Separator();
+			ImGui::Dummy({ 0,5 });
+
+			ImGui::TableNextColumn();
 			ImGui::Text("pump on (hold)");
-			ImGui::Text("fire timed water burst");
+			ImGui::Text("log current angle settings");
 			ImGui::Dummy({ 0,5 });
 			ImGui::Separator();
 		}

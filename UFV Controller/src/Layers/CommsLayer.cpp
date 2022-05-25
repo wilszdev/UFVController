@@ -18,7 +18,7 @@ void CommsLayer::DoOutgoingComms()
 		}
 	}
 
-	if (m_bufferedByte != -1) return; 
+	if (m_bufferedByte != -1) return;
 
 	if (g_ufvState.drive != m_oldState.drive)
 	{
@@ -89,6 +89,28 @@ void CommsLayer::DoOutgoingComms()
 		}
 		else
 			m_skippedPanAngleDueToDebounce = true;
+	}
+
+	if (g_ufvState.motorPower != m_oldState.motorPower)
+	{
+		std::chrono::nanoseconds diff = m_lastMotorPower - std::chrono::steady_clock::now();
+		size_t ms = diff.count() / 1000000;
+
+		if (ms > ANGLE_DEBOUNCE_DELAY_MS)
+		{
+			if (Win32WriteByteToComPort(m_comPort, 'M'))
+			{
+				m_outgoingData.Write('M');
+				if (Win32WriteByteToComPort(m_comPort, (char)g_ufvState.motorPower))
+					m_outgoingData.Write((char)g_ufvState.motorPower);
+				else
+					m_bufferedByte = (int)(g_ufvState.motorPower & 0xFF);
+
+				m_lastMotorPower = std::chrono::steady_clock::now();
+			}
+		}
+		else
+			m_skippedMotorPowerDueToDebounce = true;
 	}
 
 	if (g_ufvState.pumpOn != m_oldState.pumpOn)
@@ -237,6 +259,7 @@ void CommsLayer::OnUIRender()
 
 	int tmpP = m_oldState.panAngle;
 	int tmpT = m_oldState.tiltAngle;
+	int tmpMP = m_oldState.motorPower;
 
 	memcpy(&m_oldState, &g_ufvState, sizeof(ufv_state));
 
@@ -244,6 +267,12 @@ void CommsLayer::OnUIRender()
 		m_oldState.panAngle = tmpP;
 	if (m_skippedTiltAngleDueToDebounce)
 		m_oldState.tiltAngle = tmpT;
+	if (m_skippedMotorPowerDueToDebounce)
+		m_oldState.motorPower = tmpMP;
+
+	m_skippedPanAngleDueToDebounce = false;
+	m_skippedTiltAngleDueToDebounce = false;
+	m_skippedMotorPowerDueToDebounce = false;
 }
 
 void CommsLayer::OnAttach()

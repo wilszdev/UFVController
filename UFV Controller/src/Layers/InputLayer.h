@@ -8,7 +8,7 @@ class InputLayer : public Walnut::Layer
 private:
 	float m_angleSensitivityX = -2.5f;
 	float m_angleSensitivityY = 2.5f;
-	float m_powerSensitivity = 5.0f;
+	float m_motorPowerSensitivity = 5.0f;
 	int m_presetIndex = 0;
 
 	controller_input m_input[2] = { 0 };

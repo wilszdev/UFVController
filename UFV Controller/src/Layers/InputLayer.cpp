@@ -19,7 +19,7 @@ void InputLayer::OnUIRender()
 	ImGui::Text("Sensitivity Parameters");
 	ImGui::SliderFloat("angleX", &m_angleSensitivityX, -10.0f, 10.0f);
 	ImGui::SliderFloat("angleY", &m_angleSensitivityY, -10.0f, 10.0f);
-	ImGui::SliderFloat("power", &m_powerSensitivity, -10.0f, 10.0f);
+	ImGui::SliderFloat("motor power", &m_motorPowerSensitivity, -10.0f, 10.0f);
 	ImGui::Dummy({ 0, 5 });
 
 	ImGui::Text("Controller Input State");
@@ -220,6 +220,16 @@ void InputLayer::ActOnInput()
 		g_ufvState.tiltAngle += truncDiff;
 		if (g_ufvState.tiltAngle > 80) g_ufvState.tiltAngle = 80;
 		else if (g_ufvState.tiltAngle < -5) g_ufvState.tiltAngle = -5;
+	}
+
+	if (m_newController->leftStick.avgY != 0.0)
+	{
+		float diff = m_newController->leftStick.avgY * m_motorPowerSensitivity;
+		int truncDiff = (int)diff;
+
+		g_ufvState.motorPower += truncDiff;
+		if (g_ufvState.tiltAngle > 255) g_ufvState.tiltAngle = 255;
+		else if (g_ufvState.tiltAngle < 0) g_ufvState.tiltAngle = 0;
 	}
 
 	if (m_newController->right.pressed)
