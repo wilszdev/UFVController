@@ -134,7 +134,7 @@ void CommsLayer::DoIncomingComms()
 
 	memset(m_recvBuffer, 0, COMMS_RECV_BUFFER_SIZE);
 
-	size_t totalRead = 0;
+	DWORD totalRead = 0;
 
 	DWORD bytesRead = 0;
 	do
