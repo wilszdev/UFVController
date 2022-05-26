@@ -1,6 +1,18 @@
 #include "PresetsLayer.h"
 #include "../Win32Helpers.h"
 
+static void ClampPresets()
+{
+	for (int i = 0; i < NUM_PRESETS; ++i)
+	{
+		angle_preset* preset = g_anglePresets + i;
+		if (preset->pan < -80) preset->pan = -80;
+		if (preset->pan > 80) preset->pan = 80;
+		if (preset->tilt < -5) preset->tilt = -5;
+		if (preset->tilt > 80) preset->tilt = 80;
+	}
+}
+
 static void SavePresets()
 {
 	HANDLE file = CreateFileA("presets.dat", GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
@@ -33,6 +45,8 @@ static void LoadPresets()
 	else
 		Win32Log("[LoadPresets] CreateFileA() failed with error %d: %s",
 			GetLastError(), Win32GetErrorCodeDescription(GetLastError()).c_str());
+
+	ClampPresets();
 }
 
 void PresetsLayer::OnUIRender()
@@ -50,6 +64,8 @@ void PresetsLayer::OnUIRender()
 		ImGui::Text(buf); ImGui::SameLine();
 		ImGui::InputInt2(buf2, g_anglePresets[i].angles);
 	}
+
+	ClampPresets();
 
 	if (ImGui::Button("Save these presets"))
 	{

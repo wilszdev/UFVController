@@ -14,14 +14,14 @@ extern ufv_state g_ufvState;
 #define NUM_PRESETS 6
 struct angle_preset
 {
-	struct
-	{
-		int pan;
-		int tilt;
-	};
 	union
 	{
 		int angles[2];
+		struct
+		{
+			int pan;
+			int tilt;
+		};
 	};
 };
 
