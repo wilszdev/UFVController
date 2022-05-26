@@ -228,8 +228,8 @@ void InputLayer::ActOnInput()
 		int truncDiff = (int)diff;
 
 		g_ufvState.motorPower += truncDiff;
-		if (g_ufvState.tiltAngle > 255) g_ufvState.tiltAngle = 255;
-		else if (g_ufvState.tiltAngle < 0) g_ufvState.tiltAngle = 0;
+		if (g_ufvState.motorPower > 255) g_ufvState.motorPower = 255;
+		else if (g_ufvState.motorPower < 0) g_ufvState.motorPower = 0;
 	}
 
 	if (m_newController->right.pressed)
