@@ -3,14 +3,16 @@
 #include "Walnut/EntryPoint.h"
 #include "Layers/Layers.h"
 
-ufv_state g_ufvState = { 0, 0, 0, false, 200};
+ufv_state g_ufvState = { 0, 0, 0, false, 200 };
+angle_preset g_anglePresets[NUM_PRESETS] = {};
+
 
 void ApplyPreset(int index)
 {
 	if (index < 0 || index > NUM_PRESETS - 1) return;
 
-	g_ufvState.tiltAngle = PRESET_TILT_ANGLE_VALUES[index];
-	g_ufvState.panAngle = PRESET_PAN_ANGLE_VALUES[index];
+	g_ufvState.tiltAngle = g_anglePresets[index].tilt;
+	g_ufvState.panAngle = g_anglePresets[index].pan;
 }
 
 Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
@@ -25,6 +27,7 @@ Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
 	app->PushLayer<GamepadControlsLayer>();
 	app->PushLayer<CommsLayer>();
 	app->PushLayer<LoggingLayer>();
+	app->PushLayer<PresetsLayer>();
 	app->SetMenubarCallback(
 		[app]()
 		{

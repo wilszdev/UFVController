@@ -11,10 +11,23 @@ struct ufv_state
 
 extern ufv_state g_ufvState;
 
-#define ANGLE_DEBOUNCE_DELAY_MS 100
-
 #define NUM_PRESETS 6
-const int PRESET_TILT_ANGLE_VALUES[NUM_PRESETS] = { -5,45,-5,45,-5,45 };
-const int PRESET_PAN_ANGLE_VALUES[NUM_PRESETS] = { -60,60,-60,60,-60,60 };
+struct angle_preset
+{
+	struct
+	{
+		int pan;
+		int tilt;
+	};
+	union
+	{
+		int angles[2];
+	};
+};
+
+extern angle_preset g_anglePresets[NUM_PRESETS];
+
+
+#define ANGLE_DEBOUNCE_DELAY_MS 100
 
 void ApplyPreset(int index);
