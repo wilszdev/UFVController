@@ -54,7 +54,7 @@ void FluidLayer::OnUIRender()
 		ImGui::Separator();
 		ImGui::Spacing();
 
-		ImGui::Text("Tilt Angle Presets (click to apply)");
+		ImGui::Text("Angle Presets (click to apply)");
 		ImGui::Spacing();
 		char buf[32] = {};
 		for (int i = 0; i < NUM_PRESETS; ++i)

@@ -26,7 +26,7 @@ static void SavePresets()
 		CloseHandle(file);
 	}
 	else
-		Win32Log("[LoadPresets] CreateFileA() failed with error %d: %s",
+		Win32Log("[SavePresets] CreateFileA() failed with error %d: %s",
 			GetLastError(), Win32GetErrorCodeDescription(GetLastError()).c_str());
 }
 
