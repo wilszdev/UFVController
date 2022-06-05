@@ -1,6 +1,4 @@
 #pragma once
-
-#pragma once
 #include "Win32Helpers.h"
 #include <Xinput.h>
 #include <cstdint>
